@@ -1,14 +1,14 @@
-const express = require('express');
-const cors = require('cors');
-const cookieParser = require('cookie-parser');
-const bodyParser = require('body-parser');
-const routes = require('./routes');
+var express = require('express');
+var cors = require('cors');
+var cookieParser = require('cookie-parser');
+var bodyParser = require('body-parser');
+var routes = require('./build/routes');
 
-const app = express();
-const PORT = process.env.PORT || 3000;
+var app = express();
+var PORT = process.env.PORT || 3000;
 var server = app.listen(PORT);
-const io = require('socket.io')(server);
-const socketFunc = require('./socket/socket_io.js');
+var io = require('socket.io')(server);
+var socketFunc = require('./build/socket/socket_io.js');
 
 /* Replace keys with environment variables */
 
