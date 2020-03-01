@@ -5,7 +5,7 @@ const bodyParser = require('body-parser');
 const routes = require('./routes');
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 var server = app.listen(PORT);
 const io = require('socket.io')(server);
 const socketFunc = require('./socket/socket_io.js');
