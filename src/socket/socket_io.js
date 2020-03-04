@@ -19,12 +19,12 @@ export const runSocket = function(server, io) {
     let roomsData = [];
     socket.join(socket.id); // socket.id ensures unique room per user
     
-    if (servStore.rooms.length) {
+    /* if (servStore.rooms.length) {
       servStore.rooms.forEach((current) => {
         roomsData.push(JSON.stringify(current));
       });
       io.sockets.in(socket.id).emit('rooms', roomsData);
-    }
+    } */
   });
 
   lobby.on('connection', function(socket) {
