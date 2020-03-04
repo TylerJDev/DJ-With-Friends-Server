@@ -3,6 +3,7 @@ import { disconnect } from './events/disconnect.js';
 import { createRoom } from './events/createRoom.js';
 import { checkLock } from './events/checkLock.js';
 import * as store from './store/index.js';
+import * as util from 'util';
 
 export const runSocket = function(server, io) {
   const lobby = io.of('/rooms');
@@ -19,12 +20,13 @@ export const runSocket = function(server, io) {
     let roomsData = [];
     socket.join(socket.id); // socket.id ensures unique room per user
     
-    /* if (servStore.rooms.length) {
-      servStore.rooms.forEach((current) => {
-        roomsData.push(JSON.stringify(current));
-      });
-      io.sockets.in(socket.id).emit('rooms', roomsData);
-    } */
+    // if (servStore.rooms.length) {
+    //   servStore.rooms.forEach((current) => {
+    //     roomsData.push(util.inspect(current).replace(/[']/g, '"'));
+    //     //roomsData.push(JSON.stringify(current));
+    //   });
+    //   io.sockets.in(socket.id).emit('rooms', roomsData);
+    // }
   });
 
   lobby.on('connection', function(socket) {

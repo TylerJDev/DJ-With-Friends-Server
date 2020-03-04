@@ -17,6 +17,10 @@ var _index = require('./store/index.js');
 
 var store = _interopRequireWildcard(_index);
 
+var _util = require('util');
+
+var util = _interopRequireWildcard(_util);
+
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
 var runSocket = exports.runSocket = function runSocket(server, io) {
@@ -34,12 +38,13 @@ var runSocket = exports.runSocket = function runSocket(server, io) {
     var roomsData = [];
     socket.join(socket.id); // socket.id ensures unique room per user
 
-    if (servStore.rooms.length) {
-      servStore.rooms.forEach(function (current) {
-        roomsData.push(JSON.stringify(current));
-      });
-      io.sockets.in(socket.id).emit('rooms', roomsData);
-    }
+    // if (servStore.rooms.length) {
+    //   servStore.rooms.forEach((current) => {
+    //     roomsData.push(util.inspect(current).replace(/[']/g, '"'));
+    //     //roomsData.push(JSON.stringify(current));
+    //   });
+    //   io.sockets.in(socket.id).emit('rooms', roomsData);
+    // }
   });
 
   lobby.on('connection', function (socket) {
