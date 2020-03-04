@@ -38,10 +38,4 @@ var createUser = exports.createUser = function createUser(user, socket, io) {
     store.usersCurrent[store.usersCurrent.findIndex(function (findUser) {
         return findUser.id === user.id;
     })].socketID.push(socket.id);
-    io.sockets.in(socket.id).emit('testing', { 'testing': 'testing' });
-    // try {
-    //  store.lobby.emit('servers', store.rooms);
-    // } catch (e) {
-    //     console.log(e);
-    // }
 };

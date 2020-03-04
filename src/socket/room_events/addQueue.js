@@ -37,10 +37,8 @@ export const playTrack = (data, currentUser, roomHost, newRoom, skipped=false) =
     }
 
     if (globalStore.rooms[currentRoom] === undefined) {
-        console.log('err');
-        console.log(globalStore.rooms);
-        console.log(currentRoom);
-        console.log(currentUser.active);
+        console.log('An error has occurred! Couldn\'t skip track! {ERR 12}');
+        return false;
     }
 
     const emptyQueue = {'track': '', 'currentPlaying': false, 'artist': '', 'album': '', 'duration': '', 'timeStarted': 0, 'history': globalStore.rooms[currentRoom].history};
@@ -100,15 +98,13 @@ export const playTrack = (data, currentUser, roomHost, newRoom, skipped=false) =
         return false;
     }
 
-    console.log('Try to request');
-
     request.put(options, function(error, response, body) {
       let errorFound = '';
 
       try {
         let errorOf = JSON.parse(body)['error'];
         if (errorOf.hasOwnProperty('status')) {
-            console.log('SIKE U THOUGHTR, seneding error thru!');
+            console.log('An error has occurred! Couldn\'t skip track! {ERR 13}');
             console.log(userCurrent.access_token);
             newRoom.emit('roomError', {
                 'typeError': errorOf.status, 'errorMessage': errorOf.message

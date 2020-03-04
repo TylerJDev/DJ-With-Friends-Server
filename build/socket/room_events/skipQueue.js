@@ -35,7 +35,7 @@ var skipQueue = exports.skipQueue = function skipQueue(rooms, currentUser, newRo
         if (_index.globalStore.rooms[currentRoom].queue.length) {
             skipTrack();
         } else {
-            console.log('Uh oh, this was hit?!');
+            console.log('An error has occurred! Couldn\'t skip track! {ERR 22}');
         }
     } else {
         // Add to room "skip" vote

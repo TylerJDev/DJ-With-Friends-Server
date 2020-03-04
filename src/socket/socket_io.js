@@ -16,8 +16,15 @@ export const runSocket = function(server, io) {
   * each user without sending to the entire lobby.
   */
   io.sockets.on('connection', function (socket) {
+    let roomsData = [];
     socket.join(socket.id); // socket.id ensures unique room per user
-    io.sockets.in(socket.id).emit('rooms', servStore.rooms);
+    
+    if (servStore.rooms.length) {
+      servStore.rooms.forEach((current) => {
+        roomsData.push(JSON.stringify(current));
+      });
+      io.sockets.in(socket.id).emit('rooms', roomsData);
+    }
   });
 
   lobby.on('connection', function(socket) {

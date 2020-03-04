@@ -60,10 +60,8 @@ var playTrack = exports.playTrack = function playTrack(data, currentUser, roomHo
     };
 
     if (_index.globalStore.rooms[currentRoom] === undefined) {
-        console.log('err');
-        console.log(_index.globalStore.rooms);
-        console.log(currentRoom);
-        console.log(currentUser.active);
+        console.log('An error has occurred! Couldn\'t skip track! {ERR 12}');
+        return false;
     }
 
     var emptyQueue = { 'track': '', 'currentPlaying': false, 'artist': '', 'album': '', 'duration': '', 'timeStarted': 0, 'history': _index.globalStore.rooms[currentRoom].history };
@@ -126,15 +124,13 @@ var playTrack = exports.playTrack = function playTrack(data, currentUser, roomHo
         return false;
     }
 
-    console.log('Try to request');
-
     _request2.default.put(options, function (error, response, body) {
         var errorFound = '';
 
         try {
             var errorOf = JSON.parse(body)['error'];
             if (errorOf.hasOwnProperty('status')) {
-                console.log('SIKE U THOUGHTR, seneding error thru!');
+                console.log('An error has occurred! Couldn\'t skip track! {ERR 13}');
                 console.log(userCurrent.access_token);
                 newRoom.emit('roomError', {
                     'typeError': errorOf.status, 'errorMessage': errorOf.message
