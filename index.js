@@ -1,4 +1,5 @@
-require('dotenv').config('./env');
+try { require('dotenv').config('./env'); } catch (e) {};
+
 const buildType = process.env.NODE_ENV === 'development' ? 'src' : 'build';
 
 var express = require('express');
