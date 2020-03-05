@@ -29,11 +29,21 @@ export const playTrack = (data, currentUser, roomHost, newRoom, skipped=false) =
         currentRoom = globalStore.rooms.findIndex(curr => curr.name === currentUser.active.roomID);
     } catch(TypeError) {
         return;
+    }   
+
+    const usersCurrent_host = globalStore.rooms[currentRoom].users.filter(curr => curr.id === roomHost)[0];
+    
+    if (usersCurrent_host === undefined) {
+        newRoom.emit('roomError', {
+            'typeError': 'Couldn\'t find host user\'s access token!'
+        });
+
+        return false;
     }
 
     const userCurrent = {
-        access_token: globalStore.rooms[currentRoom] !== undefined ? globalStore.rooms[currentRoom].users.filter(curr => curr.id === roomHost)[0].accessToken : '',
-        user: globalStore.rooms[currentRoom] !== undefined ? globalStore.rooms[currentRoom].users.filter(curr => curr.id === roomHost)[0] : '',
+        access_token: globalStore.rooms[currentRoom] !== undefined ? usersCurrent_host.accessToken : '',
+        user: globalStore.rooms[currentRoom] !== undefined ? usersCurrent_host : '',
     }
 
     if (globalStore.rooms[currentRoom] === undefined) {

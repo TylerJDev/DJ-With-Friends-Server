@@ -1,16 +1,17 @@
+require('dotenv').config('./env');
+const buildType = process.env.NODE_ENV === 'development' ? 'src' : 'build';
+
 var express = require('express');
 var cors = require('cors');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
-var routes = require('./build/routes');
+var routes = require(`./${buildType}/routes`);
 
 var app = express();
 var PORT = process.env.PORT || 3000;
 var server = app.listen(PORT);
 var io = require('socket.io')(server);
-var socketFunc = require('./build/socket/socket_io.js');
-
-/* Replace keys with environment variables */
+var socketFunc = require(`./${buildType}/socket/socket_io.js`);
 
 var currentUserID = '';
 

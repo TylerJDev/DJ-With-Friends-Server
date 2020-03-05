@@ -19,14 +19,27 @@ export const runSocket = function(server, io) {
   io.sockets.on('connection', function (socket) {
     let roomsData = [];
     socket.join(socket.id); // socket.id ensures unique room per user
-    
-    // if (servStore.rooms.length) {
-    //   servStore.rooms.forEach((current) => {
-    //     roomsData.push(util.inspect(current).replace(/[']/g, '"'));
-    //     //roomsData.push(JSON.stringify(current));
-    //   });
-    //   io.sockets.in(socket.id).emit('rooms', roomsData);
-    // }
+
+    const target = {};
+    const newRooms = Object.assign(target, servStore.rooms);
+
+    if (servStore.rooms.length) {
+      servStore.rooms.forEach((current) => {
+        let newObj = {};
+
+        Object.assign(newObj, current);
+
+        delete newObj.users;
+        delete newObj.skipCount;
+        delete newObj.timeCounts;
+        delete newObj.currentTrack;
+        delete newObj.queue;
+
+        roomsData.push(JSON.stringify(newObj));
+      });
+
+      io.sockets.in(socket.id).emit('rooms', roomsData);
+    }
   });
 
   lobby.on('connection', function(socket) {

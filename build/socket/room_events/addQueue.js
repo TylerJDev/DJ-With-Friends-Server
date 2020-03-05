@@ -50,13 +50,21 @@ var playTrack = exports.playTrack = function playTrack(data, currentUser, roomHo
         return;
     }
 
+    var usersCurrent_host = _index.globalStore.rooms[currentRoom].users.filter(function (curr) {
+        return curr.id === roomHost;
+    })[0];
+
+    if (usersCurrent_host === undefined) {
+        newRoom.emit('roomError', {
+            'typeError': 'Couldn\'t find host user\'s access token!'
+        });
+
+        return false;
+    }
+
     var userCurrent = {
-        access_token: _index.globalStore.rooms[currentRoom] !== undefined ? _index.globalStore.rooms[currentRoom].users.filter(function (curr) {
-            return curr.id === roomHost;
-        })[0].accessToken : '',
-        user: _index.globalStore.rooms[currentRoom] !== undefined ? _index.globalStore.rooms[currentRoom].users.filter(function (curr) {
-            return curr.id === roomHost;
-        })[0] : ''
+        access_token: _index.globalStore.rooms[currentRoom] !== undefined ? usersCurrent_host.accessToken : '',
+        user: _index.globalStore.rooms[currentRoom] !== undefined ? usersCurrent_host : ''
     };
 
     if (_index.globalStore.rooms[currentRoom] === undefined) {
