@@ -34,10 +34,12 @@ export const runSocket = function(server, io) {
         delete newObj.timeCounts;
         delete newObj.currentTrack;
         delete newObj.queue;
+        delete newObj.trackHosts;
+        delete newObj.pauseList;
 
         roomsData.push(JSON.stringify(newObj));
       });
-
+      
       io.sockets.in(socket.id).emit('rooms', roomsData);
     }
   });
@@ -45,7 +47,7 @@ export const runSocket = function(server, io) {
   lobby.on('connection', function(socket) {
     socket.on('create_user', (user) => { createUser(user, socket, io); });
     socket.on('disconnect', () => { disconnect(socket); });
-    socket.on('createRoom', (data) => {createRoom(data, socket, lobby, io)}); 
+    socket.on('createRoom', (data) => {createRoom(data, socket, lobby, io, socket.id)}); 
     socket.on('checkLock', (data) => { checkLock(data, socket)});
   });
 }

@@ -7,10 +7,12 @@ exports.userConnect = undefined;
 
 var _index = require('../store/index.js');
 
+var _userHosts = require('./userHosts.js');
+
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var userConnect = exports.userConnect = function userConnect(data, id, currentUser, usersRoom, lobby, newRoom, host) {
-    var User = function User(name, id, userCount, accessToken, devices, timeJoined, roomID, host, mainDevice) {
+var userConnect = exports.userConnect = function userConnect(data, id, currentUser, usersRoom, lobby, newRoom, host, socketID) {
+    var User = function User(name, id, userCount, accessToken, devices, timeJoined, roomID, host, mainDevice, premium) {
         _classCallCheck(this, User);
 
         this.name = name;
@@ -22,9 +24,10 @@ var userConnect = exports.userConnect = function userConnect(data, id, currentUs
         this.roomID = roomID;
         this.host = host;
         this.mainDevice = mainDevice;
+        this.premium = premium;
     };
 
-    var user = new User(data.display_name, data.id, 1, data.access_token, JSON.parse(data.devices), Date.now(), id, data.id === host, data.mainDevice);
+    var user = new User(data.display_name, data.id, 1, data.access_token, JSON.parse(data.devices), Date.now(), id, data.id === host, data.mainDevice, data.premium);
 
     if (usersRoom[id] === undefined) {
         usersRoom[id] = [];
@@ -58,6 +61,13 @@ var userConnect = exports.userConnect = function userConnect(data, id, currentUs
                 _index.globalStore.rooms[currentRoom].currentTrack = { 'track': '', 'currentPlaying': false, 'artist': '' };
                 _index.globalStore.rooms[currentRoom].host = host;
                 _index.globalStore.rooms[currentRoom].timeCounts = [];
+                _index.globalStore.rooms[currentRoom].trackHosts = new Set();
+                _index.globalStore.rooms[currentRoom].pauseList = new Set();
+                _index.globalStore.rooms[currentRoom].hostSocketID = socketID;
+            }
+
+            if (user.host === true) {
+                (0, _userHosts.userHosts)({ 'active': user, 'host': true });
             }
         }
     } else {

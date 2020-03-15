@@ -1,8 +1,9 @@
 import { globalStore } from '../store/index.js';
+import { userHosts } from './userHosts.js';
 
-export const userConnect = (data, id, currentUser, usersRoom, lobby, newRoom, host) => {
+export const userConnect = (data, id, currentUser, usersRoom, lobby, newRoom, host, socketID) => {
     class User {
-        constructor(name, id, userCount, accessToken, devices, timeJoined, roomID, host, mainDevice) {
+        constructor(name, id, userCount, accessToken, devices, timeJoined, roomID, host, mainDevice, premium) {
             this.name = name;
             this.id = id;
             this.userCount = userCount;
@@ -12,10 +13,11 @@ export const userConnect = (data, id, currentUser, usersRoom, lobby, newRoom, ho
             this.roomID = roomID;
             this.host = host;
             this.mainDevice = mainDevice;
+            this.premium = premium;
         }
     }
 
-    const user = new User(data.display_name, data.id, 1, data.access_token, JSON.parse(data.devices), Date.now(), id, data.id === host, data.mainDevice);
+    const user = new User(data.display_name, data.id, 1, data.access_token, JSON.parse(data.devices), Date.now(), id, data.id === host, data.mainDevice, data.premium);
 
     if (usersRoom[id] === undefined) {
         usersRoom[id] = [];
@@ -45,6 +47,13 @@ export const userConnect = (data, id, currentUser, usersRoom, lobby, newRoom, ho
                 globalStore.rooms[currentRoom].currentTrack = {'track': '', 'currentPlaying': false, 'artist': ''};
                 globalStore.rooms[currentRoom].host = host;
                 globalStore.rooms[currentRoom].timeCounts = [];
+                globalStore.rooms[currentRoom].trackHosts = new Set();
+                globalStore.rooms[currentRoom].pauseList = new Set();
+                globalStore.rooms[currentRoom].hostSocketID = socketID;
+            }
+
+            if (user.host === true) {
+                userHosts({'active': user, 'host': true});
             }
         }
     } else {

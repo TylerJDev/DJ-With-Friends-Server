@@ -52,6 +52,8 @@ var runSocket = exports.runSocket = function runSocket(server, io) {
         delete newObj.timeCounts;
         delete newObj.currentTrack;
         delete newObj.queue;
+        delete newObj.trackHosts;
+        delete newObj.pauseList;
 
         roomsData.push(JSON.stringify(newObj));
       });
@@ -68,7 +70,7 @@ var runSocket = exports.runSocket = function runSocket(server, io) {
       (0, _disconnect.disconnect)(socket);
     });
     socket.on('createRoom', function (data) {
-      (0, _createRoom.createRoom)(data, socket, lobby, io);
+      (0, _createRoom.createRoom)(data, socket, lobby, io, socket.id);
     });
     socket.on('checkLock', function (data) {
       (0, _checkLock.checkLock)(data, socket);

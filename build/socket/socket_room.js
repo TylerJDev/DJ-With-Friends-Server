@@ -17,7 +17,9 @@ var _changeSetting = require('./room_events/changeSetting.js');
 
 var _refreshAccessToken = require('./room_events/refreshAccessToken.js');
 
-var socketRoom = exports.socketRoom = function socketRoom(io, id, rooms, host, lobby) {
+var _userHosts = require('./room_events/userHosts.js');
+
+var socketRoom = exports.socketRoom = function socketRoom(io, id, rooms, host, lobby, socketID) {
         var newRoom = io.of('/' + id);
         var usersRoom = {};
 
@@ -29,7 +31,7 @@ var socketRoom = exports.socketRoom = function socketRoom(io, id, rooms, host, l
 
                 // Grab details of user after emitting to newRoom
                 socket.on('userDetails', function (data) {
-                        (0, _userConnect.userConnect)(data, id, currentUser, usersRoom, lobby, newRoom, host);
+                        (0, _userConnect.userConnect)(data, id, currentUser, usersRoom, lobby, newRoom, host, socketID);
                 });
 
                 // Upon user adding "song" to queue
@@ -51,6 +53,10 @@ var socketRoom = exports.socketRoom = function socketRoom(io, id, rooms, host, l
 
                 socket.on('refreshAccessToken', function (data) {
                         (0, _refreshAccessToken.refreshAccessToken)(data, currentUser);
+                });
+
+                socket.on('userHosts', function (data) {
+                        (0, _userHosts.userHosts)(currentUser, data);
                 });
         });
 };
