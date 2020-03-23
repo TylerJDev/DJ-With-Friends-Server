@@ -3,11 +3,10 @@ import bcrypt from 'bcryptjs';
 
 export const checkLock = (data, socket) => {
     const currentRoom = globalStore.rooms.findIndex(curr => String(curr.name) === data.roomID);
-    console.log(data);
 
     if (globalStore.rooms[currentRoom] === undefined) {
-        console.log('Yes, this room doesn\'t exist!');
-        // pseudo code client.send('error', {'typeError': 'Room does not exist', 'errorMessage': 'Room ${roomId} does not exist!'})
+        console.error(`[checkLock.js:8] Room ${currentRoom} does not currently exist!`);
+        // TO-DO: Send error to current socket
         return false;
     }
 
@@ -15,8 +14,7 @@ export const checkLock = (data, socket) => {
     if (globalStore.rooms[currentRoom].settings['user-limit_'].length &&
         globalStore.rooms[currentRoom].users.length >= +globalStore.rooms[currentRoom].settings['user-limit_'] &&
         globalStore.rooms[currentRoom].token !== data.token) {
-        // pseudo code client.send('error', {'typeError': 'Room user limit', 'errorMessage': 'Room user limit has already been reached!'})        
-        console.log('Room limit reached!');
+        // TO-DO: Confirm this isn't being emitted to all users    
         socket.emit('lockedRoom', {
             'userLimit': true
         });

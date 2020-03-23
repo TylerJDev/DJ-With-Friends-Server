@@ -30,6 +30,6 @@ export const socketRoom = function(io, id, rooms, host, lobby, socketID) {
 
         socket.on('refreshAccessToken', (data) => { refreshAccessToken(data, currentUser); });
 
-        socket.on('userHosts', (data) => { userHosts(currentUser, data); });
+        socket.on('userHosts', (data) => { userHosts(currentUser, data, newRoom); });
     });
 }

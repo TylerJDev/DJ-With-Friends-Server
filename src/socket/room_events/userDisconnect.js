@@ -1,8 +1,6 @@
 import { globalStore } from '../store/index.js';
 
-export const userDisconnect = (usersRoom, currentUser, newRoom, id) => {   
-    // console.log(usersRoom);
-    
+export const userDisconnect = (usersRoom, currentUser, newRoom, id) => {       
     const deleteRoom = (rooms, currentUser, usersRoom) => {
         // TEST: Ensure correct room is removed!
         delete usersRoom[currentUser.roomID];

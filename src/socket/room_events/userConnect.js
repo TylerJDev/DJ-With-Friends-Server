@@ -30,8 +30,6 @@ export const userConnect = (data, id, currentUser, usersRoom, lobby, newRoom, ho
     if (usersPreExist === undefined) {
         usersRoom[id].push(user);
 
-        // Update lobby
-        //lobby.emit('updateLobby', globalStore.rooms);
         // Add user to "globalStore.rooms.user" array
         if (globalStore.rooms[currentRoom] !== undefined) {
             if (globalStore.rooms[currentRoom].hasOwnProperty('users') === false) {
@@ -50,10 +48,16 @@ export const userConnect = (data, id, currentUser, usersRoom, lobby, newRoom, ho
                 globalStore.rooms[currentRoom].trackHosts = new Set();
                 globalStore.rooms[currentRoom].pauseList = new Set();
                 globalStore.rooms[currentRoom].hostSocketID = socketID;
+                globalStore.rooms[currentRoom].noHost = false;
+                globalStore.rooms[currentRoom].playData = {};
             }
 
             if (user.host === true) {
                 userHosts({'active': user, 'host': true});
+
+                if (user.premium === 'false') {
+                    globalStore.rooms[currentRoom].noHost = true;
+                }
             }
         }
     } else {

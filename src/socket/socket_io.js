@@ -36,6 +36,9 @@ export const runSocket = function(server, io) {
         delete newObj.queue;
         delete newObj.trackHosts;
         delete newObj.pauseList;
+        delete newObj.hostSocketID;
+        delete newObj.noHost;
+        delete newObj.playData;
 
         roomsData.push(JSON.stringify(newObj));
       });
