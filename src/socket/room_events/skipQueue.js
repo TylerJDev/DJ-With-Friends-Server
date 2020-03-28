@@ -10,7 +10,11 @@ export const skipQueue = (rooms, currentUser, newRoom) => {
         clearSkipQueue(globalStore, currentRoom, newRoom);
         playTrack(globalStore.rooms[currentRoom].queue[0], currentUser, globalStore.rooms[currentRoom].host, newRoom, true);
         
-        pauseTrack(globalStore.rooms[currentRoom].users.filter(curr => curr.id === globalStore.rooms[currentRoom].host)[0].access_token);
+        const hostValue = globalStore.rooms[currentRoom].users.filter(curr => curr.id === globalStore.rooms[currentRoom].host)
+
+        if (hostValue.length) {
+            pauseTrack(hostValue[0].access_token);
+        }
     }
 
     // If there are no tracks in the queue
@@ -23,7 +27,7 @@ export const skipQueue = (rooms, currentUser, newRoom) => {
         if (globalStore.rooms[currentRoom].queue.length) {
             skipTrack();
         } else {
-            console.log('An error has occurred! Couldn\'t skip track! {ERR 22}');
+            console.error('[skipQueue.js:30] An error has occurred! Couldn\'t skip track!');
         }
     } else {
         // Add to room "skip" vote

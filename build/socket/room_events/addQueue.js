@@ -68,7 +68,7 @@ var playTrack = exports.playTrack = function playTrack(data, currentUser, roomHo
     };
 
     if (_index.globalStore.rooms[currentRoom] === undefined) {
-        console.log('An error has occurred! Couldn\'t skip track! {ERR 12}');
+        console.log('An error has occurred! {ERR 15}');
         return false;
     }
 
@@ -81,8 +81,6 @@ var playTrack = exports.playTrack = function playTrack(data, currentUser, roomHo
     var nextTrackArtist = validQueue ? _index.globalStore.rooms[currentRoom].queue[0].trackArtist : '';
     var nextTrackAlbum = validQueue ? _index.globalStore.rooms[currentRoom].queue[0].trackAlbum : '';
     var nextTrackAlbumImage = validQueue ? _index.globalStore.rooms[currentRoom].queue[0].trackAlbumImage !== undefined && _index.globalStore.rooms[currentRoom].queue[0].trackAlbumImage ? _index.globalStore.rooms[currentRoom].queue[0].trackAlbumImage : '' : '';
-
-    var userDevices = [];
     var options = {};
 
     if (skipped === true) {
@@ -97,7 +95,13 @@ var playTrack = exports.playTrack = function playTrack(data, currentUser, roomHo
     if (nextTrack === false) {
         // Grab track from data passed
         if (data === undefined) {
-            pauseTrack(userCurrent.access_token);
+            _index.globalStore.rooms[currentRoom].trackHosts.forEach(function (current) {
+                pauseTrack(current.accessToken);
+            });
+            _index.globalStore.rooms[currentRoom].pauseList.forEach(function (current) {
+                pauseTrack(current.accessToken);
+            });
+
             newRoom.emit('currentTrack', emptyQueue);
             newRoom.emit('addedQueue', _index.globalStore.rooms[currentRoom].queue);
             return false;
@@ -109,103 +113,110 @@ var playTrack = exports.playTrack = function playTrack(data, currentUser, roomHo
         nextTrackAlbumImage = data.trackAlbumImage;
     }
 
-    //# DEV-NOTE: The user could be allowed to see which device to pick from if there are multiple devices
-    //# This could be done via a modal popup using sockets to emit this data to the user
-    try {
-        userDevices = userCurrent.user.devices.devices.filter(function (curr) {
-            return curr['is_restricted'] === false;
-        });
-        var deviceID = currentUser.active.mainDevice === null ? userDevices.length ? '?device_id=' + userDevices[0].id : '' : '?device_id=' + currentUser.active.mainDevice;
+    var makePlaybackQuery = function makePlaybackQuery(_ref) {
+        var _ref$deviceID = _ref.deviceID,
+            deviceID = _ref$deviceID === undefined ? '' : _ref$deviceID,
+            _ref$accessToken = _ref.accessToken,
+            accessToken = _ref$accessToken === undefined ? '' : _ref$accessToken;
+
+        if (deviceID === '' || accessToken === '') {
+            newRoom.emit('roomError', {
+                'typeError': 'Couldn\'t find device(s)!', 'errorMessage': 'No devices were found'
+            });
+
+            // REQUEST FOR A NEW DEVICE ID .. 
+            return false;
+        }
+
+        deviceID = '?device_id=' + deviceID;
 
         options = {
             url: 'https://api.spotify.com/v1/me/player/play' + deviceID,
-            headers: { 'Authorization': 'Bearer ' + userCurrent.access_token },
+            headers: { 'Authorization': 'Bearer ' + accessToken },
             body: JSON.stringify({
                 "uris": [nextTrack]
             })
         };
-    } catch (TypeError) {
-        newRoom.emit('roomError', {
-            'typeError': 'Couldn\'t find device(s)!', 'errorMessage': 'No devices were found'
-        });
 
-        return false;
-    }
+        return options;
+    };
 
-    _request2.default.put(options, function (error, response, body) {
-        var errorFound = '';
-
-        try {
-            var errorOf = JSON.parse(body)['error'];
-            if (errorOf.hasOwnProperty('status')) {
-                console.log('An error has occurred! Couldn\'t skip track! {ERR 13}');
-                console.log(userCurrent.access_token);
-                newRoom.emit('roomError', {
-                    'typeError': errorOf.status, 'errorMessage': errorOf.message
-                });
-
-                errorFound = true;
-                clearFromQueue(currentRoom, nextTrack, newRoom);
-                return false;
+    _index.globalStore.rooms[currentRoom].trackHosts.forEach(function (current) {
+        var options = makePlaybackQuery(current);
+        _request2.default.put(options, function (error, response, body) {
+            if (body !== undefined && body.length) {
+                var errorOf = JSON.parse(body)['error'];
+                if (errorOf.hasOwnProperty('status')) {
+                    if (!Array.from(_index.globalStore.rooms[currentRoom].trackHosts).filter(function (currentUser) {
+                        return currentUser.user.premium === 'true';
+                    }).length) {
+                        clearFromQueue(currentRoom, nextTrack, newRoom);
+                        return false;
+                    }
+                }
             }
 
-            return true;
-        } catch (SyntaxError) {
-            errorFound = false;
-        }
+            if (current.user.host) {
+                // If there is no error playing the track
+                var trackTimeout = setTimeout(function () {
+                    checkTrack();
+                }, data.trackDuration - 10000);
+                _index.globalStore.rooms[currentRoom].timeCounts.push(trackTimeout);
 
-        // If there is no error with playing the track
-        if (!errorFound) {
-            var trackTimeout = setTimeout(function () {
-                checkTrack();
-            }, data.trackDuration - 10000);
-            _index.globalStore.rooms[currentRoom].timeCounts.push(trackTimeout);
+                // Emit current track to room
+                _index.globalStore.rooms[currentRoom].currentTrack = { 'track': nextTrackName, 'currentPlaying': true, 'artist': nextTrackArtist, 'album': nextTrackAlbum, 'albumImage': nextTrackAlbumImage, 'duration': data.trackDuration, 'timeStarted': Date.now(), 'queue': _index.globalStore.rooms[currentRoom].queue, 'history': _index.globalStore.rooms[currentRoom].history };
+                newRoom.emit('addedQueue', _index.globalStore.rooms[currentRoom].queue);
+                newRoom.emit('currentTrack', _index.globalStore.rooms[currentRoom].currentTrack);
 
-            // Emit current queue to room
+                var checkTrack = function checkTrack() {
+                    var currentAccess_token = userCurrent.access_token;
+                    /* If the host isn't premium, the API call above will result in an error
+                       To navigate this issue, find a host in the room whom is currently premium
+                    */
 
+                    if (currentUser.active.premium !== true) {
+                        var premium_hosts = Array.from(_index.globalStore.rooms[currentRoom].trackHosts).filter(function (currentUser) {
+                            return currentUser.user.premium === 'true';
+                        });
 
-            // Emit current track to room
-            _index.globalStore.rooms[currentRoom].currentTrack = { 'track': nextTrackName, 'currentPlaying': true, 'artist': nextTrackArtist, 'album': nextTrackAlbum, 'albumImage': nextTrackAlbumImage, 'duration': data.trackDuration, 'timeStarted': Date.now(), 'queue': _index.globalStore.rooms[currentRoom].queue, 'history': _index.globalStore.rooms[currentRoom].history };
-            newRoom.emit('addedQueue', _index.globalStore.rooms[currentRoom].queue);
-            newRoom.emit('currentTrack', _index.globalStore.rooms[currentRoom].currentTrack);
+                        if (!premium_hosts.length) {
+                            setTimeout(function () {
+                                clearFromQueue(currentRoom, nextTrack, newRoom);
+                            }, 10000);
 
-            var checkTrack = function checkTrack() {
+                            // Emit need for premium user
+                            socket.emit('roomError', {
+                                'typeError': 'No eligible hosts!', 'errorMessage': 'Premium host is needed to play from the queue!'
+                            });
+                        } else {
+                            currentAccess_token = premium_hosts[0].accessToken;
+                        }
+                    }
 
-                // Check the current playback state 
-                var playbackOptions = {
-                    url: 'https://api.spotify.com/v1/me/player',
-                    headers: { 'Authorization': 'Bearer ' + userCurrent.access_token }
+                    // Check the current playback state 
+                    var playbackOptions = {
+                        url: 'https://api.spotify.com/v1/me/player',
+                        headers: { 'Authorization': 'Bearer ' + currentAccess_token }
+                    };
+
+                    _request2.default.get(playbackOptions, function (error, response, body) {
+                        var trackDetails = JSON.parse(body);
+                        // Check time versus data.trackDuration
+                        console.log('Current duration: ' + trackDetails.progress_ms + ', Track duration: ' + data.trackDuration);
+
+                        // Update client time progress
+                        newRoom.emit('timeUpdate', { 'seconds': Math.floor(trackDetails.progress_ms / 1000) });
+                        (0, _skipQueue.clearSkipQueue)(_index.globalStore, currentRoom, newRoom);
+                        var timeLeft = data.trackDuration - trackDetails.progress_ms;
+                        setTimeout(function () {
+                            // Remove track from queue
+                            clearFromQueue(currentRoom, nextTrack, newRoom);
+                            playTrack(_index.globalStore.rooms[currentRoom].queue[0], currentUser, roomHost, newRoom);
+                        }, timeLeft);
+                    });
                 };
-
-                _request2.default.get(playbackOptions, function (error, response, body) {
-                    var trackDetails = JSON.parse(body);
-
-                    // If track is playing, pause for room
-
-                    // Check time versus data.trackDuration
-                    console.log('Current duration: ' + trackDetails.progress_ms + ', Track duration: ' + data.trackDuration);
-
-                    // Update client time progress
-                    newRoom.emit('timeUpdate', { 'seconds': Math.floor(trackDetails.progress_ms / 1000) });
-                    (0, _skipQueue.clearSkipQueue)(_index.globalStore, currentRoom, newRoom);
-
-                    // if (trackDetails.progress_ms >= data.trackDuration - 10000) {
-                    var timeLeft = data.trackDuration - trackDetails.progress_ms;
-                    setTimeout(function () {
-                        // Remove track from queue
-                        clearFromQueue(currentRoom, nextTrack, newRoom);
-                        // const trackIndex = globalStore.rooms[currentRoom].queue.findIndex(curr => curr.trackURI === nextTrack);
-                        // newRoom.emit('removeFromQueue', globalStore.rooms[currentRoom].queue[trackIndex]);
-
-                        // const removedTrack = globalStore.rooms[currentRoom].queue.splice(trackIndex, 1);
-                        // globalStore.rooms[currentRoom].history.push(removedTrack);
-
-                        playTrack(_index.globalStore.rooms[currentRoom].queue[0], currentUser, roomHost, newRoom);
-                    }, timeLeft);
-                    // }
-                });
-            };
-        }
+            }
+        });
     });
 };
 
@@ -229,4 +240,9 @@ var clearFromQueue = exports.clearFromQueue = function clearFromQueue(currentRoo
 
     var removedTrack = _index.globalStore.rooms[currentRoom].queue.splice(trackIndex, 1);
     _index.globalStore.rooms[currentRoom].history.push(removedTrack);
+
+    // Clear any users on "pausedList"
+    _index.globalStore.rooms[currentRoom].pauseList.forEach(function (current) {
+        pauseTrack(current.accessToken);
+    });
 };

@@ -20,9 +20,13 @@ var skipQueue = exports.skipQueue = function skipQueue(rooms, currentUser, newRo
         clearSkipQueue(_index.globalStore, currentRoom, newRoom);
         (0, _addQueue.playTrack)(_index.globalStore.rooms[currentRoom].queue[0], currentUser, _index.globalStore.rooms[currentRoom].host, newRoom, true);
 
-        (0, _addQueue.pauseTrack)(_index.globalStore.rooms[currentRoom].users.filter(function (curr) {
+        var hostValue = _index.globalStore.rooms[currentRoom].users.filter(function (curr) {
             return curr.id === _index.globalStore.rooms[currentRoom].host;
-        })[0].access_token);
+        });
+
+        if (hostValue.length) {
+            (0, _addQueue.pauseTrack)(hostValue[0].access_token);
+        }
     };
 
     // If there are no tracks in the queue

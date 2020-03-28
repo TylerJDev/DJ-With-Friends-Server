@@ -6,7 +6,7 @@ import bcrypt from 'bcryptjs';
 import { socketRoom } from '../socket_room.js';
 
 
-export const createRoom = (data, socket, lobby, io) => {
+export const createRoom = (data, socket, lobby, io, socketID) => {
     const randID = randomIDGen(globalStore.rooms.map(cID => cID.name));
     const findExistingRooms = globalStore.rooms.filter(curr => curr.id === data.id);
 
@@ -59,10 +59,10 @@ export const createRoom = (data, socket, lobby, io) => {
         // Hash password
         bcrypt.hash(data.settings['password'], 10, function (err, hash) {
             addToRooms(hash);
-            socketRoom(io, randID, globalStore.rooms, host, lobby);
+            socketRoom(io, randID, globalStore.rooms, host, lobby, socketID);
         });
     } else {
         addToRooms();
-        socketRoom(io, randID, globalStore.rooms, host, lobby);
+        socketRoom(io, randID, globalStore.rooms, host, lobby, socketID);
     }
 }
