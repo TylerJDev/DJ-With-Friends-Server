@@ -21,7 +21,13 @@ export const userHosts = (currentUser, data={}, newRoom) => {
             return false;
         }
 
-        let currentDevice = currentUser.active.devices.devices.length ? currentUser.active.devices.devices.filter(current => current.is_active)[0].id : '';
+        let currentDevice = currentUser.active.devices.devices.length ? currentUser.active.devices.devices.filter(current => current.is_active)[0] : '';
+
+        if (currentDevice !== undefined || currentDevice !== '') {
+            currentDevice = currentDevice.id;
+        } else if (currentDevice === undefined) {
+            currentDevice = '';
+        }
 
         globalStore.rooms[currentRoom].trackHosts.add({'deviceID': currentDevice, 'accessToken': currentUser.active.accessToken, 'user': currentUser.active});
 

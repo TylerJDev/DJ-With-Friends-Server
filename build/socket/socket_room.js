@@ -56,7 +56,7 @@ var socketRoom = exports.socketRoom = function socketRoom(io, id, rooms, host, l
                 });
 
                 socket.on('userHosts', function (data) {
-                        (0, _userHosts.userHosts)(currentUser, data);
+                        (0, _userHosts.userHosts)(currentUser, data, newRoom);
                 });
         });
 };

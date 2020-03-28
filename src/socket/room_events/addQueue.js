@@ -177,7 +177,7 @@ export const playTrack = (data, currentUser, roomHost, newRoom, skipped = false)
                         'currentPlaying': true,
                         'artist': nextTrackArtist,
                         'album': nextTrackAlbum,
-                        'albumImage': nextTrackAlbumImage,
+                        'albumImage': validateAlbumImage(nextTrackAlbumImage),
                         'duration': data.trackDuration,
                         'timeStarted': Date.now(),
                         'queue': globalStore.rooms[currentRoom].queue,
@@ -260,7 +260,7 @@ export const playTrack = (data, currentUser, roomHost, newRoom, skipped = false)
                                     if (premium_hosts.length) {
                                         playTrack(globalStore.rooms[currentRoom].queue[0], currentUser, roomHost, newRoom);
                                     } else {
-                                        if (globalStore.rooms[currentRoom].queue[0] !== undefined) {
+                                        if (globalStore.rooms[currentRoom] !== undefined && globalStore.rooms[currentRoom].queue[0] !== undefined) {
                                             globalStore.rooms[currentRoom].noHost = true;
                                             globalStore.rooms[currentRoom].playData = {
                                                 'queueCurrent': globalStore.rooms[currentRoom].queue[0],
@@ -295,8 +295,11 @@ export const pauseTrack = (access_token) => {
 }
 
 export const clearFromQueue = (currentRoom, nextTrack, newRoom) => {
+    if (globalStore.rooms[currentRoom] === undefined) {
+        return false;
+    }
+    
     let trackIndex = globalStore.rooms[currentRoom].queue.findIndex(curr => curr.trackURI === nextTrack);
-
 
     if (trackIndex !== -1) {
         newRoom.emit('removeFromQueue', globalStore.rooms[currentRoom].queue[trackIndex]);
@@ -312,4 +315,19 @@ export const clearFromQueue = (currentRoom, nextTrack, newRoom) => {
     globalStore.rooms[currentRoom].pauseList.forEach((current) => {
         pauseTrack(current.accessToken);
     });
+}
+
+const validateAlbumImage = (src) => {
+    // Array is expected from passed value {src}
+    if (!src.length) {
+        return '';
+    }
+
+    let newSrc = src.filter((current) => {
+        if (current.url.indexOf('https://i.scdn.co/image/') === 0 && current.url.replace('https://i.scdn.co/image/', '').length === 40) {
+            return current;
+        }
+    });
+
+    return newSrc;
 }

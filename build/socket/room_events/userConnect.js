@@ -44,8 +44,6 @@ var userConnect = exports.userConnect = function userConnect(data, id, currentUs
     if (usersPreExist === undefined) {
         usersRoom[id].push(user);
 
-        // Update lobby
-        //lobby.emit('updateLobby', globalStore.rooms);
         // Add user to "globalStore.rooms.user" array
         if (_index.globalStore.rooms[currentRoom] !== undefined) {
             if (_index.globalStore.rooms[currentRoom].hasOwnProperty('users') === false) {
@@ -64,10 +62,16 @@ var userConnect = exports.userConnect = function userConnect(data, id, currentUs
                 _index.globalStore.rooms[currentRoom].trackHosts = new Set();
                 _index.globalStore.rooms[currentRoom].pauseList = new Set();
                 _index.globalStore.rooms[currentRoom].hostSocketID = socketID;
+                _index.globalStore.rooms[currentRoom].noHost = false;
+                _index.globalStore.rooms[currentRoom].playData = {};
             }
 
             if (user.host === true) {
                 (0, _userHosts.userHosts)({ 'active': user, 'host': true });
+
+                if (user.premium === 'false') {
+                    _index.globalStore.rooms[currentRoom].noHost = true;
+                }
             }
         }
     } else {

@@ -14,7 +14,6 @@ var refreshAccessToken = exports.refreshAccessToken = function refreshAccessToke
     });
 
     allUsers.forEach(function (currentUser, index) {
-        console.log('AccessToken: ' + currentUser[0].accessToken + ', index: ' + index + ', name: ' + currentUser[0].name);
         if (data.oldAccessToken === currentUser[0].accessToken && data.id === currentUser[0].id) {
             currentUser[0].accessToken = data.newAccessToken;
         }
