@@ -8,8 +8,6 @@ exports.userDisconnect = undefined;
 var _index = require('../store/index.js');
 
 var userDisconnect = exports.userDisconnect = function userDisconnect(usersRoom, currentUser, newRoom, id) {
-    // console.log(usersRoom);
-
     var deleteRoom = function deleteRoom(rooms, currentUser, usersRoom) {
         // TEST: Ensure correct room is removed!
         delete usersRoom[currentUser.roomID];
