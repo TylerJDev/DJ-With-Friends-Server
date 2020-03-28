@@ -38,7 +38,7 @@ var userHosts = exports.userHosts = function userHosts(currentUser) {
             return current.is_active;
         })[0] : '';
 
-        if (currentDevice !== undefined || currentDevice !== '') {
+        if (currentDevice !== undefined && currentDevice !== '') {
             currentDevice = currentDevice.id;
         } else if (currentDevice === undefined) {
             currentDevice = '';

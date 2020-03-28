@@ -23,7 +23,7 @@ export const userHosts = (currentUser, data={}, newRoom) => {
 
         let currentDevice = currentUser.active.devices.devices.length ? currentUser.active.devices.devices.filter(current => current.is_active)[0] : '';
 
-        if (currentDevice !== undefined || currentDevice !== '') {
+        if (currentDevice !== undefined && currentDevice !== '') {
             currentDevice = currentDevice.id;
         } else if (currentDevice === undefined) {
             currentDevice = '';
