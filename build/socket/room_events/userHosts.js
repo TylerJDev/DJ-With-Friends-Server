@@ -16,6 +16,7 @@ var userHosts = exports.userHosts = function userHosts(currentUser) {
     var currentRoom = _index.globalStore.rooms.findIndex(function (curr) {
         return curr.name === currentUser.active.roomID;
     });
+
     var checkHostUser = function checkHostUser(hostObj) {
         if (!hostObj.hasOwnProperty('host')) {
             return false;

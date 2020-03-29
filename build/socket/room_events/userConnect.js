@@ -12,7 +12,7 @@ var _userHosts = require('./userHosts.js');
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var userConnect = exports.userConnect = function userConnect(data, id, currentUser, usersRoom, lobby, newRoom, host, socketID) {
-    var User = function User(name, id, userCount, accessToken, devices, timeJoined, roomID, host, mainDevice, premium) {
+    var User = function User(name, id, userCount, accessToken, devices, timeJoined, roomID, host, mainDevice, premium, hostMode) {
         _classCallCheck(this, User);
 
         this.name = name;
@@ -25,9 +25,10 @@ var userConnect = exports.userConnect = function userConnect(data, id, currentUs
         this.host = host;
         this.mainDevice = mainDevice;
         this.premium = premium;
+        this.hostMode = hostMode;
     };
 
-    var user = new User(data.display_name, data.id, 1, data.access_token, JSON.parse(data.devices), Date.now(), id, data.id === host, data.mainDevice, data.premium);
+    var user = new User(data.display_name, data.id, 1, data.access_token, JSON.parse(data.devices), Date.now(), id, data.id === host, data.mainDevice, data.premium, data.hostMode);
 
     if (usersRoom[id] === undefined) {
         usersRoom[id] = [];
@@ -72,6 +73,8 @@ var userConnect = exports.userConnect = function userConnect(data, id, currentUs
                 if (user.premium === 'false') {
                     _index.globalStore.rooms[currentRoom].noHost = true;
                 }
+            } else if (user.host !== true && user.hostMode === true) {
+                (0, _userHosts.userHosts)({ 'active': user, 'host': true });
             }
         }
     } else {

@@ -3,6 +3,7 @@ import { playTrack }  from './addQueue.js';
 
 export const userHosts = (currentUser, data={}, newRoom) => {
     const currentRoom = globalStore.rooms.findIndex(curr => curr.name === currentUser.active.roomID);
+
     const checkHostUser = (hostObj) => {
         if (!hostObj.hasOwnProperty('host')) {
             return false;
