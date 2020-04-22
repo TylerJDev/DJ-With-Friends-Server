@@ -13,7 +13,13 @@ export const skipQueue = (rooms, currentUser, newRoom) => {
         const hostValue = globalStore.rooms[currentRoom].users.filter(curr => curr.id === globalStore.rooms[currentRoom].host)
 
         if (hostValue.length) {
-            pauseTrack(hostValue[0].access_token);
+            const accessTokenUser = hostValue[0].accessToken !== undefined && hostValue[0].accessToken.length ? hostValue[0].accessToken : hostValue[0].access_token !== undefined ? hostValue.access_token : '';
+
+            if (!accessTokenUser.length) {
+                console.error('[skipQueue.js] An error has occurred! Couldn\'t pause track!'); 
+            }
+
+            pauseTrack(accessTokenUser);
         }
     }
 
@@ -27,7 +33,7 @@ export const skipQueue = (rooms, currentUser, newRoom) => {
         if (globalStore.rooms[currentRoom].queue.length) {
             skipTrack();
         } else {
-            console.error('[skipQueue.js:30] An error has occurred! Couldn\'t skip track!');
+            console.error('[skipQueue.js] An error has occurred! Couldn\'t skip track!');
         }
     } else {
         // Add to room "skip" vote

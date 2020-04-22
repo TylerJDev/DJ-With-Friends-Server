@@ -1,11 +1,34 @@
 import { globalStore } from '../store/index.js';
 
-export const userDisconnect = (usersRoom, currentUser, newRoom, id) => {       
+export const userDisconnect = (usersRoom, currentUser, newRoom, id, lobby) => {       
     const deleteRoom = (rooms, currentUser, usersRoom) => {
         // TEST: Ensure correct room is removed!
         delete usersRoom[currentUser.roomID];
         let findIndexRoom = rooms.findIndex(curr => curr.name === currentUser.roomID);
+        let clonedArr = [];
         rooms.splice(findIndexRoom, 1);
+
+        if (globalStore.rooms.length) {
+            globalStore.rooms.forEach((curr) => {
+                let cloned = {};
+                Object.assign(cloned, curr);
+                
+                delete cloned.users;
+                delete cloned.skipCount;
+                delete cloned.timeCounts;
+                delete cloned.currentTrack;
+                delete cloned.queue;
+                delete cloned.trackHosts;
+                delete cloned.pauseList;
+                delete cloned.hostSocketID;
+                delete cloned.noHost;
+                delete cloned.playData;
+
+                clonedArr.push(cloned);
+            });
+        }
+
+        lobby.emit('servers', clonedArr);
     }
  
     if (currentUser.active === undefined || usersRoom[currentUser.active.roomID] === undefined) {

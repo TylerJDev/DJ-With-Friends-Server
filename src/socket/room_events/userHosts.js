@@ -22,8 +22,10 @@ export const userHosts = (currentUser, data={}, newRoom) => {
             return false;
         }
 
-        let currentDevice = currentUser.active.devices.devices.length ? currentUser.active.devices.devices.filter(current => current.is_active)[0] : '';
-
+        let currentDevice = currentUser.active.mainDevice !== undefined || currentUser.active.mainDevice.length ? 
+            {'id': currentUser.active.mainDevice} :
+            currentUser.active.devices.devices.length ? currentUser.active.devices.devices.filter(current => current.is_active)[0] : '';
+         
         if (currentDevice !== undefined && currentDevice !== '') {
             currentDevice = currentDevice.id;
         } else if (currentDevice === undefined) {
@@ -49,6 +51,7 @@ export const userHosts = (currentUser, data={}, newRoom) => {
             playTrack(globalStore.rooms[currentRoom].playData.queueCurrent, globalStore.rooms[currentRoom].playData.currentUser, globalStore.rooms[currentRoom].playData.roomHost, globalStore.rooms[currentRoom].playData.newRoom);
         }
     } else {
+        console.log('Added to pause list');
         checkHostUser(data);
         globalStore.rooms[currentRoom].trackHosts.forEach((current) => {
             if (current.user.accessToken === currentUser.active.accessToken) {

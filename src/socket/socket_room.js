@@ -24,7 +24,7 @@ export const socketRoom = function(io, id, rooms, host, lobby, socketID) {
 
         socket.on('skipTrack', () => { skipQueue(rooms, currentUser, newRoom) })
  
-        socket.on('disconnect', () => { userDisconnect(usersRoom, currentUser, newRoom, id); });
+        socket.on('disconnect', () => { userDisconnect(usersRoom, currentUser, newRoom, id, lobby); });
 
         socket.on('changeSetting', (data) => { changeSetting(currentUser, data); });
 

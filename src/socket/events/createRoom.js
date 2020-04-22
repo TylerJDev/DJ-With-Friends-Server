@@ -1,6 +1,7 @@
 import { globalStore } from '../store/index.js';
 import {
-    randomIDGen
+    randomIDGen,
+    randomAlphaGen
 } from '../utils/generateRoomID.js';
 import bcrypt from 'bcryptjs';
 import { socketRoom } from '../socket_room.js';
@@ -33,6 +34,17 @@ export const createRoom = (data, socket, lobby, io, socketID) => {
     // Name equals the ID of the room 
     data.name = randID;
 
+    let serverID = randomAlphaGen();
+
+    // Ensure no other room has the serverID
+    let idMatches = globalStore.rooms.filter(current => current.server_id === serverID);
+
+    if (idMatches.length) {
+        serverID += idMatches.length;
+    }
+
+    data.server_id = randomAlphaGen();
+
     // Host of the current room
     const host = data.id;
     const addToRooms = (hash = null) => {
@@ -43,6 +55,9 @@ export const createRoom = (data, socket, lobby, io, socketID) => {
             }
             delete data.settings.password;
         }
+        
+        // Add current time to room data object
+        data.timeCreated = new Date().getTime();
 
         globalStore.rooms.push(data);
 
@@ -52,6 +67,7 @@ export const createRoom = (data, socket, lobby, io, socketID) => {
             'host': host,
             'passwordProtected': data.settings.hasOwnProperty('password')
         });
+        
         lobby.emit('servers', globalStore.rooms);
     }
 

@@ -311,7 +311,10 @@ export const clearFromQueue = (currentRoom, nextTrack, newRoom) => {
     const removedTrack = globalStore.rooms[currentRoom].queue.splice(trackIndex, 1);
     globalStore.rooms[currentRoom].history.push(removedTrack);
 
-    // Clear any users on "pausedList"
+    globalStore.rooms[currentRoom].trackHosts.forEach((current) => {
+        if (current.user.premium === 'true' || current.user.premium === true) pauseTrack(current.accessToken);
+    });
+
     globalStore.rooms[currentRoom].pauseList.forEach((current) => {
         pauseTrack(current.accessToken);
     });
