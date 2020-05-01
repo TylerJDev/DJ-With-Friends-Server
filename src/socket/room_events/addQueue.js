@@ -1,17 +1,19 @@
+/* eslint-disable */
 import request from 'request'
-import {
-    globalStore
-} from '../store/index.js';
-import {
-    clearSkipQueue
-} from './skipQueue.js';
+import { globalStore } from '../store/index';
+import { clearSkipQueue } from './skipQueue';
+import winston from '../../../config/winston';
+
 
 export const addQueue = (data, newRoom, currentUser) => {
     let currentRoom = globalStore.rooms.findIndex(curr => curr.name === currentUser.active.roomID);
 
     // If queue empty, play track
-    if (globalStore.rooms[currentRoom].queue.length === 0) {
+    if (globalStore.rooms[currentRoom] !== undefined && globalStore.rooms[currentRoom].queue.length === 0) {
         playTrack(data, currentUser, globalStore.rooms[currentRoom].host, newRoom);
+    } else if (globalStore.rooms[currentRoom] === undefined) {
+        winston.error(`Room - Could not find index of room, currentUser: ${JSON.stringify(currentUser)}`);
+        return false;
     }
 
     // Add track to queue
@@ -35,6 +37,7 @@ export const playTrack = (data, currentUser, roomHost, newRoom, skipped = false)
         currentRoom = globalStore.rooms.findIndex(curr => curr.name === currentUser.active.roomID);
         usersCurrent_host = globalStore.rooms[currentRoom].users.filter(curr => curr.id === roomHost)[0];
     } catch (TypeError) {
+        winston.error(`Room - TypeError received: ${TypeError}`);
         return;
     }
 
@@ -153,6 +156,7 @@ export const playTrack = (data, currentUser, roomHost, newRoom, skipped = false)
                             'errorMessage': 'Premium host is needed to play from the queue!'
                         });
                     } else {
+                        console.log('body below');
                         console.log(body);
                     }
 
@@ -238,6 +242,7 @@ export const playTrack = (data, currentUser, roomHost, newRoom, skipped = false)
                             request.get(playbackOptions, function (error, response, body) {
                                 const trackDetails = JSON.parse(body);
                                 // Check time versus data.trackDuration
+                                console.log('Track Playing!');
                                 console.log(`Current duration: ${trackDetails.progress_ms}, Track duration: ${data.trackDuration}`);
 
                                 // Update client time progress
@@ -281,7 +286,7 @@ export const playTrack = (data, currentUser, roomHost, newRoom, skipped = false)
     });
 }
 
-export const pauseTrack = (access_token) => {
+export const pauseTrack = (access_token, queue) => {
     const options = {
         url: 'https://api.spotify.com/v1/me/player/pause',
         headers: {
@@ -290,8 +295,9 @@ export const pauseTrack = (access_token) => {
     }
 
     request.put(options, function (error, resp, body) {
-        console.log(body);
+        console.log('Track Paused');
     });
+
 }
 
 export const clearFromQueue = (currentRoom, nextTrack, newRoom) => {
@@ -311,13 +317,15 @@ export const clearFromQueue = (currentRoom, nextTrack, newRoom) => {
     const removedTrack = globalStore.rooms[currentRoom].queue.splice(trackIndex, 1);
     globalStore.rooms[currentRoom].history.push(removedTrack);
 
-    globalStore.rooms[currentRoom].trackHosts.forEach((current) => {
-        if (current.user.premium === 'true' || current.user.premium === true) pauseTrack(current.accessToken);
-    });
+    if (!globalStore.rooms[currentRoom].queue.length) {
+        globalStore.rooms[currentRoom].trackHosts.forEach((current) => {
+            if (current.user.premium === 'true' || current.user.premium === true) pauseTrack(current.accessToken, globalStore.rooms[currentRoom].queue);
+        });
 
-    globalStore.rooms[currentRoom].pauseList.forEach((current) => {
-        pauseTrack(current.accessToken);
-    });
+        globalStore.rooms[currentRoom].pauseList.forEach((current) => {
+            pauseTrack(current.accessToken, globalStore.rooms[currentRoom].queue);
+        });
+    }
 }
 
 const validateAlbumImage = (src) => {

@@ -16,6 +16,7 @@ export const runSocket = function(server, io) {
   * This allows for custom messages to be sent to
   * each user without sending to the entire lobby.
   */
+ 
   io.sockets.on('connection', function (socket) {
     let roomsData = [];
     socket.join(socket.id); // socket.id ensures unique room per user

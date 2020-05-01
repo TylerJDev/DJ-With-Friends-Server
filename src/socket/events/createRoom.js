@@ -5,6 +5,7 @@ import {
 } from '../utils/generateRoomID.js';
 import bcrypt from 'bcryptjs';
 import { socketRoom } from '../socket_room.js';
+import winston from '../../../config/winston';
 
 
 export const createRoom = (data, socket, lobby, io, socketID) => {
@@ -68,6 +69,7 @@ export const createRoom = (data, socket, lobby, io, socketID) => {
             'passwordProtected': data.settings.hasOwnProperty('password')
         });
         
+        winston.info(`Room Creation - ${randID}`);
         lobby.emit('servers', globalStore.rooms);
     }
 
