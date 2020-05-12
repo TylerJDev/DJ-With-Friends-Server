@@ -29,7 +29,7 @@ export const userConnect = (data, id, currentUser, usersRoom, lobby, newRoom, ho
                 let TEMP_ID = TEMP_IMAGES[0].url.replace('https://profile-images.scdn.co/images/userprofile/default/', '');
 
                 // Replace all non-alphanumeric characters
-                TEMP_ID = TEMP_ID.replace(/[\W_]/g, '')
+                TEMP_ID = TEMP_ID.replace(/[\W_]/g, '');
 
                 if (TEMP_ID.length === 40) {
                     userImage = {'imageURL': `https://profile-images.scdn.co/images/userprofile/default/${TEMP_ID}`, 'imageID': TEMP_ID};

@@ -141,7 +141,6 @@ export const playTrack = (data, currentUser, roomHost, newRoom, skipped = false)
     let active = false;
     globalStore.rooms[currentRoom].trackHosts.forEach((current) => {
         const options = makePlaybackQuery(current);
-
         if (options) {
             request.put(options, function (error, response, body) {
                 let premium_hosts = Array.from(globalStore.rooms[currentRoom].trackHosts).filter(currentUser => currentUser.user.premium === 'true');
@@ -162,7 +161,6 @@ export const playTrack = (data, currentUser, roomHost, newRoom, skipped = false)
                         newRoom.emit('reAuth', {
                             'user': current.user.id,
                         });
-
                     }
 
                     if (errorOf.hasOwnProperty('status')) {
@@ -346,4 +344,30 @@ const validateAlbumImage = (src) => {
     });
 
     return newSrc;
+}
+
+export const startFromPosition = (accessToken, deviceID, position, trackURI, pause=false)  => {
+    // This function allows player to start from set position
+    // This will be used in order to start the track from the set position if user has to re-auth
+
+    const playerOptions = {
+        url: `https://api.spotify.com/v1/me/player/play?device_id=${deviceID}`,
+        headers: {
+            'Authorization': 'Bearer ' + accessToken
+        },
+        body: JSON.stringify({
+            "uris": [trackURI],
+            "position_ms": position
+        })
+    }
+
+    request.put(playerOptions, function (error, response, body) {
+        if (error) {
+            try {
+                winston.error(JSON.stringify(error));
+            } catch(e) {
+                return;
+            }
+        }
+    });
 }

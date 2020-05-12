@@ -1,18 +1,17 @@
 import { globalStore } from '../store/index.js';
 
-export const userDisconnect = (usersRoom, currentUser, newRoom, id, lobby) => {       
-    const deleteRoom = (rooms, currentUser, usersRoom) => {
+export const userDisconnect = (usersRoom, currentUser, newRoom, id, lobby) => {
+    const deleteRoom = (rooms, currentUserActive, usersRoomActive) => {
         // TEST: Ensure correct room is removed!
-        delete usersRoom[currentUser.roomID];
-        let findIndexRoom = rooms.findIndex(curr => curr.name === currentUser.roomID);
-        let clonedArr = [];
+        delete usersRoomActive[currentUserActive.roomID];
+        const findIndexRoom = rooms.findIndex((curr) => curr.name === currentUserActive.roomID);
+        const clonedArr = [];
         rooms.splice(findIndexRoom, 1);
 
         if (globalStore.rooms.length) {
             globalStore.rooms.forEach((curr) => {
-                let cloned = {};
+                const cloned = {};
                 Object.assign(cloned, curr);
-                
                 delete cloned.users;
                 delete cloned.skipCount;
                 delete cloned.timeCounts;
@@ -29,25 +28,40 @@ export const userDisconnect = (usersRoom, currentUser, newRoom, id, lobby) => {
         }
 
         lobby.emit('servers', clonedArr);
-    }
- 
+    };
+
     if (currentUser.active === undefined || usersRoom[currentUser.active.roomID] === undefined) {
         return false;
     }
 
     // Check how many occurances of "user"
-    let userOccur = usersRoom[currentUser.active.roomID].filter(curr => curr.id === currentUser.active.id);
+    const userOccur = usersRoom[currentUser.active.roomID].filter((curr) => curr.id === currentUser.active.id);
 
     // If the last occurance of user has left
     if (userOccur[0] !== undefined && userOccur[0].userCount === 1) {
         newRoom.emit('disconnected', currentUser.active.id);
 
         // Remove user from usersRoom array
-        let userIndex = usersRoom[currentUser.active.roomID].findIndex(curr => curr.id === currentUser.active.id);
+        const userIndex = usersRoom[currentUser.active.roomID].findIndex((curr) => curr.id === currentUser.active.id);
 
         // Remove user from globalStore.rooms array
-        let currentRoom = globalStore.rooms.findIndex(curr => curr.name === currentUser.active.roomID);
+        const currentRoom = globalStore.rooms.findIndex((curr) => curr.name === currentUser.active.roomID);
         if (globalStore.rooms[currentRoom] !== undefined) {
+            // Check if user is room host
+            if (currentUser.active.host === true && globalStore.rooms[currentRoom].id === currentUser.active.id && globalStore.rooms[currentRoom].users.length) {
+                // If user is room host, ensure very next user becomes host
+                let newHost = globalStore.rooms[currentRoom].users.findIndex((currUser) => currUser.id !== currentUser.active.id);
+
+                newHost = newHost > -1 ? globalStore.rooms[currentRoom].users[newHost] : false;
+                if (newHost !== false) {
+                    globalStore.rooms[currentRoom].token = newHost.accessToken;
+                    globalStore.rooms[currentRoom].id = newHost.id;
+                    globalStore.rooms[currentRoom].host = newHost.id;
+                    globalStore.rooms[currentRoom].display_name = newHost.name;
+                    newHost.host = true;
+                }
+            }
+
             globalStore.rooms[currentRoom].users.forEach((c, i) => { 
                 if (c.id === currentUser.active.id) {
                     globalStore.rooms[currentRoom].users.splice(i, 1);
@@ -55,8 +69,8 @@ export const userDisconnect = (usersRoom, currentUser, newRoom, id, lobby) => {
             });
         }
 
-        if (userIndex > -1 ) {
-            const emitData = {'messageData': {'message': 'User Left', 'type': 'info', 'name': currentUser.active.name, 'timeJoined': Date.now()}, 'users': usersRoom[id]}
+        if (userIndex > -1) {
+            const emitData = { messageData: {message: 'User Left', type: 'info', name: currentUser.active.name, timeJoined: Date.now()}, users: usersRoom[id] };
             usersRoom[currentUser.active.roomID].splice(userIndex, 1);
             newRoom.emit('user', emitData);
         }
@@ -64,7 +78,7 @@ export const userDisconnect = (usersRoom, currentUser, newRoom, id, lobby) => {
         // Check if room is empty
         if (!usersRoom[currentUser.active.roomID].length) {
             deleteRoom(globalStore.rooms, currentUser.active, usersRoom);
-        }   
+        }
     } else if (userOccur[0] !== undefined) {
         usersRoom[currentUser.active.roomID].forEach((item, index) => {
             if (item.id === [currentUser.active.id]) {
