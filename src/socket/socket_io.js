@@ -8,6 +8,7 @@ import * as util from 'util';
 export const runSocket = function(server, io) {
   const lobby = io.of('/rooms');
   let servStore = store.globalStore;
+  let test = [];
   servStore.lobby = lobby;
 
   /* 
@@ -16,7 +17,7 @@ export const runSocket = function(server, io) {
   * This allows for custom messages to be sent to
   * each user without sending to the entire lobby.
   */
- 
+  
   io.sockets.on('connection', function (socket) {
     let roomsData = [];
     socket.join(socket.id); // socket.id ensures unique room per user

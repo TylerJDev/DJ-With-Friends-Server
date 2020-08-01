@@ -3,5 +3,9 @@ export const globalStore = {
     usersRoom: [],
     rooms: [],
     existingUser: '',
-    lobby: ''
-}
+    lobby: '',
+};
+
+export const passwordStore = {
+    roomsPasswords: [],
+};

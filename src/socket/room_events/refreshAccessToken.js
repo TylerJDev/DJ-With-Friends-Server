@@ -19,6 +19,7 @@ export const refreshAccessToken = (data) => {
                 const grabPosition = Date.now() - globalStore.rooms[currentRoom].currentTrack.timeStarted;
                 startFromPosition(data.newAccessToken, currentUser[0].user.mainDevice, grabPosition, globalStore.rooms[currentRoom].currentTrack.trackURI); // (accessToken, position, trackURI, pause=false)
             } catch (e) {
+                winston.error('Error occurred during grabbing position');
                 winston.error(e);
             }
         }
