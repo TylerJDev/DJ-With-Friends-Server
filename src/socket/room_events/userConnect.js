@@ -3,7 +3,7 @@ import { userHosts } from './userHosts.js';
 
 export const userConnect = (data, id, currentUser, usersRoom, lobby, newRoom, host, socketID) => {
     class User {
-        constructor(name, id, userCount, accessToken, devices, timeJoined, roomID, host, mainDevice, premium) {
+        constructor(name, id, userCount, accessToken, devices, timeJoined, roomID, host, mainDevice, premium, hostMode, image) {
             this.name = name;
             this.id = id;
             this.userCount = userCount;
@@ -14,10 +14,33 @@ export const userConnect = (data, id, currentUser, usersRoom, lobby, newRoom, ho
             this.host = host;
             this.mainDevice = mainDevice;
             this.premium = premium;
+            this.hostMode = hostMode
+            this.image = image
         }
     }
 
-    const user = new User(data.display_name, data.id, 1, data.access_token, JSON.parse(data.devices), Date.now(), id, data.id === host, data.mainDevice, data.premium);
+    let userImage = false;
+
+    try {
+        const TEMP_IMAGES = JSON.parse(data.images);
+        if (TEMP_IMAGES.length && TEMP_IMAGES[0].hasOwnProperty('url')) {
+            // Confirm URL is valid
+            if (TEMP_IMAGES[0].url.indexOf('https://profile-images.scdn.co/images/userprofile/default/') === 0) {
+                let TEMP_ID = TEMP_IMAGES[0].url.replace('https://profile-images.scdn.co/images/userprofile/default/', '');
+
+                // Replace all non-alphanumeric characters
+                TEMP_ID = TEMP_ID.replace(/[\W_]/g, '');
+
+                if (TEMP_ID.length === 40) {
+                    userImage = {'imageURL': `https://profile-images.scdn.co/images/userprofile/default/${TEMP_ID}`, 'imageID': TEMP_ID};
+                }
+            }
+        }
+    } catch (e) {
+        userImage = '';
+    }
+    
+    const user = new User(data.display_name, data.id, 1, data.access_token, JSON.parse(data.devices), Date.now(), id, data.id === host, data.mainDevice, data.premium, data.hostMode, userImage);
 
     if (usersRoom[id] === undefined) {
         usersRoom[id] = [];
@@ -58,6 +81,8 @@ export const userConnect = (data, id, currentUser, usersRoom, lobby, newRoom, ho
                 if (user.premium === 'false') {
                     globalStore.rooms[currentRoom].noHost = true;
                 }
+            } else if (user.host !== true && user.hostMode === true) {
+                userHosts({'active': user, 'host': true});
             }
         }
     } else {

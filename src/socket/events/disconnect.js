@@ -1,4 +1,5 @@
 import * as servStore from '../store/index.js';
+import winston from '../../../config/winston';
 
 export const disconnect = (socket) => {
     const store = servStore.globalStore;
@@ -13,7 +14,7 @@ export const disconnect = (socket) => {
             store.usersCurrent[disconnectedUser].amount -= 1;
             store.usersCurrent[disconnectedUser].socketID.splice(socketIndex, 1); 
         } else {
-            console.log(`${store.usersCurrent[disconnectedUser]['display_name']} has left!`); // eslint-disable-line
+            winston.info(`Room Disconnection - ${store.usersCurrent[disconnectedUser]['display_name']}`);
             store.usersCurrent.splice(disconnectedUser); 
         }
     }

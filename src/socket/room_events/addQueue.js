@@ -1,17 +1,19 @@
+/* eslint-disable */
 import request from 'request'
-import {
-    globalStore
-} from '../store/index.js';
-import {
-    clearSkipQueue
-} from './skipQueue.js';
+import { globalStore } from '../store/index';
+import { clearSkipQueue } from './skipQueue';
+import winston from '../../../config/winston';
+
 
 export const addQueue = (data, newRoom, currentUser) => {
     let currentRoom = globalStore.rooms.findIndex(curr => curr.name === currentUser.active.roomID);
 
     // If queue empty, play track
-    if (globalStore.rooms[currentRoom].queue.length === 0) {
+    if (globalStore.rooms[currentRoom] !== undefined && globalStore.rooms[currentRoom].queue.length === 0) {
         playTrack(data, currentUser, globalStore.rooms[currentRoom].host, newRoom);
+    } else if (globalStore.rooms[currentRoom] === undefined) {
+        winston.error(`Room - Could not find index of room, currentUser: ${JSON.stringify(currentUser)}`);
+        return false;
     }
 
     // Add track to queue
@@ -35,6 +37,7 @@ export const playTrack = (data, currentUser, roomHost, newRoom, skipped = false)
         currentRoom = globalStore.rooms.findIndex(curr => curr.name === currentUser.active.roomID);
         usersCurrent_host = globalStore.rooms[currentRoom].users.filter(curr => curr.id === roomHost)[0];
     } catch (TypeError) {
+        winston.error(`Room - TypeError received: ${TypeError}, currentRoom index: ${currentRoom}`);
         return;
     }
 
@@ -52,7 +55,7 @@ export const playTrack = (data, currentUser, roomHost, newRoom, skipped = false)
     }
 
     if (globalStore.rooms[currentRoom] === undefined) {
-        console.error('[addQueue.js:50] Could not find current room! Result for globalStore.rooms[currentRoom] is: ', globalStore.rooms[currentRoom]);
+        winston.error(`Room - Could not find current room at index: ${currentRoom}, currentUser: ${JSON.stringify(currentUser)}`)
         return false;
     }
 
@@ -69,10 +72,10 @@ export const playTrack = (data, currentUser, roomHost, newRoom, skipped = false)
     let validQueue = globalStore.rooms[currentRoom].queue.length > 0;
     // Grab the next track in the queue
     let nextTrack = validQueue ? globalStore.rooms[currentRoom].queue[0].trackURI : false;
-    let nextTrackName = validQueue ? globalStore.rooms[currentRoom].queue[0].trackName : '';
-    let nextTrackArtist = validQueue ? globalStore.rooms[currentRoom].queue[0].trackArtist : '';
-    let nextTrackAlbum = validQueue ? globalStore.rooms[currentRoom].queue[0].trackAlbum : '';
-    let nextTrackAlbumImage = validQueue ? (globalStore.rooms[currentRoom].queue[0].trackAlbumImage !== undefined && globalStore.rooms[currentRoom].queue[0].trackAlbumImage) ? globalStore.rooms[currentRoom].queue[0].trackAlbumImage : '' : '';
+    let nextTrackName = validQueue ? globalStore.rooms[currentRoom].queue[0].track : '';
+    let nextTrackArtist = validQueue ? globalStore.rooms[currentRoom].queue[0].artist : '';
+    let nextTrackAlbum = validQueue ? globalStore.rooms[currentRoom].queue[0].album : '';
+    let nextTrackAlbumImage = validQueue ? (globalStore.rooms[currentRoom].queue[0].albumImage !== undefined && globalStore.rooms[currentRoom].queue[0].albumImage) ? globalStore.rooms[currentRoom].queue[0].albumImage : '' : '';
     let options = {};
 
     if (skipped === true) {
@@ -99,10 +102,10 @@ export const playTrack = (data, currentUser, roomHost, newRoom, skipped = false)
             return false;
         }
         nextTrack = data.trackURI;
-        nextTrackName = data.trackName;
-        nextTrackArtist = data.trackArtist;
-        nextTrackAlbum = data.trackAlbum;
-        nextTrackAlbumImage = data.trackAlbumImage;
+        nextTrackName = data.track;
+        nextTrackArtist = data.artist;
+        nextTrackAlbum = data.album;
+        nextTrackAlbumImage = data.albumImage;
     }
 
     const makePlaybackQuery = ({
@@ -138,7 +141,6 @@ export const playTrack = (data, currentUser, roomHost, newRoom, skipped = false)
     let active = false;
     globalStore.rooms[currentRoom].trackHosts.forEach((current) => {
         const options = makePlaybackQuery(current);
-
         if (options) {
             request.put(options, function (error, response, body) {
                 let premium_hosts = Array.from(globalStore.rooms[currentRoom].trackHosts).filter(currentUser => currentUser.user.premium === 'true');
@@ -152,8 +154,13 @@ export const playTrack = (data, currentUser, roomHost, newRoom, skipped = false)
                             'typeError': 'No eligible hosts!',
                             'errorMessage': 'Premium host is needed to play from the queue!'
                         });
-                    } else {
-                        console.log(body);
+                    }  else {
+                        // This may be hit if the user's access token has expired
+                        winston.error(`Room - Error has likely occurred ${JSON.stringify(body)}`);
+                        // Add condition if body has reauth error
+                        newRoom.emit('reAuth', {
+                            'user': current.user.id,
+                        });
                     }
 
                     if (errorOf.hasOwnProperty('status')) {
@@ -168,7 +175,7 @@ export const playTrack = (data, currentUser, roomHost, newRoom, skipped = false)
                     // If there is no error playing the track
                     let trackTimeout = setTimeout(() => {
                         checkTrack()
-                    }, data.trackDuration - 10000);
+                    }, data.duration - 10000);
                     globalStore.rooms[currentRoom].timeCounts.push(trackTimeout);
 
                     // Emit current track to room
@@ -177,11 +184,12 @@ export const playTrack = (data, currentUser, roomHost, newRoom, skipped = false)
                         'currentPlaying': true,
                         'artist': nextTrackArtist,
                         'album': nextTrackAlbum,
-                        'albumImage': nextTrackAlbumImage,
-                        'duration': data.trackDuration,
+                        'albumImage': validateAlbumImage(nextTrackAlbumImage),
+                        'duration': data.duration,
                         'timeStarted': Date.now(),
                         'queue': globalStore.rooms[currentRoom].queue,
-                        'history': globalStore.rooms[currentRoom].history
+                        'history': globalStore.rooms[currentRoom].history,
+                        'trackURI': nextTrack
                     };
 
                     newRoom.emit('addedQueue', globalStore.rooms[currentRoom].queue);
@@ -223,7 +231,6 @@ export const playTrack = (data, currentUser, roomHost, newRoom, skipped = false)
                             }
                         }
 
-
                         // Check the current playback state 
                         const playbackOptions = {
                             url: 'https://api.spotify.com/v1/me/player',
@@ -232,20 +239,19 @@ export const playTrack = (data, currentUser, roomHost, newRoom, skipped = false)
                             },
                         }
 
-
                         if (active === false) {
                             active = true;
                             request.get(playbackOptions, function (error, response, body) {
                                 const trackDetails = JSON.parse(body);
-                                // Check time versus data.trackDuration
-                                console.log(`Current duration: ${trackDetails.progress_ms}, Track duration: ${data.trackDuration}`);
+                                // Check time versus data.duration
+                                winston.info(`Room - Room: ${globalStore.rooms[currentRoom].name}, Current duration: ${trackDetails.progress_ms}, Track duration: ${data.duration}`);
 
                                 // Update client time progress
                                 newRoom.emit('timeUpdate', {
                                     'seconds': Math.floor(trackDetails.progress_ms / 1000)
                                 });
                                 clearSkipQueue(globalStore, currentRoom, newRoom);
-                                const timeLeft = (data.trackDuration - trackDetails.progress_ms);
+                                const timeLeft = (data.duration - trackDetails.progress_ms);
                                 setTimeout(function () {
                                     // Remove track from queue
 
@@ -260,7 +266,7 @@ export const playTrack = (data, currentUser, roomHost, newRoom, skipped = false)
                                     if (premium_hosts.length) {
                                         playTrack(globalStore.rooms[currentRoom].queue[0], currentUser, roomHost, newRoom);
                                     } else {
-                                        if (globalStore.rooms[currentRoom].queue[0] !== undefined) {
+                                        if (globalStore.rooms[currentRoom] !== undefined && globalStore.rooms[currentRoom].queue[0] !== undefined) {
                                             globalStore.rooms[currentRoom].noHost = true;
                                             globalStore.rooms[currentRoom].playData = {
                                                 'queueCurrent': globalStore.rooms[currentRoom].queue[0],
@@ -290,13 +296,19 @@ export const pauseTrack = (access_token) => {
     }
 
     request.put(options, function (error, resp, body) {
-        console.log(body);
+        if (error) {
+            winston.error(error);
+        }
     });
+
 }
 
 export const clearFromQueue = (currentRoom, nextTrack, newRoom) => {
+    if (globalStore.rooms[currentRoom] === undefined) {
+        return false;
+    }
+    
     let trackIndex = globalStore.rooms[currentRoom].queue.findIndex(curr => curr.trackURI === nextTrack);
-
 
     if (trackIndex !== -1) {
         newRoom.emit('removeFromQueue', globalStore.rooms[currentRoom].queue[trackIndex]);
@@ -308,8 +320,54 @@ export const clearFromQueue = (currentRoom, nextTrack, newRoom) => {
     const removedTrack = globalStore.rooms[currentRoom].queue.splice(trackIndex, 1);
     globalStore.rooms[currentRoom].history.push(removedTrack);
 
-    // Clear any users on "pausedList"
-    globalStore.rooms[currentRoom].pauseList.forEach((current) => {
-        pauseTrack(current.accessToken);
+    if (!globalStore.rooms[currentRoom].queue.length) {
+        globalStore.rooms[currentRoom].trackHosts.forEach((current) => {
+            if (current.user.premium === 'true' || current.user.premium === true) pauseTrack(current.accessToken);
+        });
+
+        globalStore.rooms[currentRoom].pauseList.forEach((current) => {
+            pauseTrack(current.accessToken);
+        });
+    }
+}
+
+const validateAlbumImage = (src) => {
+    // Array is expected from passed value {src}
+    if (!src.length) {
+        return '';
+    }
+
+    let newSrc = src.filter((current) => {
+        if (current.url.indexOf('https://i.scdn.co/image/') === 0 && current.url.replace('https://i.scdn.co/image/', '').length === 40) {
+            return current;
+        }
+    });
+
+    return newSrc;
+}
+
+export const startFromPosition = (accessToken, deviceID, position, trackURI, pause=false)  => {
+    // This function allows player to start from set position
+    // This will be used in order to start the track from the set position if user has to re-auth
+
+    const playerOptions = {
+        url: `https://api.spotify.com/v1/me/player/play?device_id=${deviceID}`,
+        headers: {
+            'Authorization': 'Bearer ' + accessToken
+        },
+        body: JSON.stringify({
+            "uris": [trackURI],
+            "position_ms": position
+        })
+    }
+
+    request.put(playerOptions, function (error, response, body) {
+        if (error) {
+            try {
+                winston.error(JSON.stringify(error));
+            } catch(e) {
+                return;
+            }
+        }
     });
 }

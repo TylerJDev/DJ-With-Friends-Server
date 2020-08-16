@@ -8,6 +8,7 @@ import * as util from 'util';
 export const runSocket = function(server, io) {
   const lobby = io.of('/rooms');
   let servStore = store.globalStore;
+  let test = [];
   servStore.lobby = lobby;
 
   /* 
@@ -16,6 +17,7 @@ export const runSocket = function(server, io) {
   * This allows for custom messages to be sent to
   * each user without sending to the entire lobby.
   */
+  
   io.sockets.on('connection', function (socket) {
     let roomsData = [];
     socket.join(socket.id); // socket.id ensures unique room per user
@@ -26,8 +28,21 @@ export const runSocket = function(server, io) {
     if (servStore.rooms.length) {
       servStore.rooms.forEach((current) => {
         let newObj = {};
+        let users = newObj.users;
+        let userImages;
+        Object.assign(newObj, current);   
 
-        Object.assign(newObj, current);
+        users = newObj.users.map((current) => {
+          return current.name;
+        });
+
+        userImages = newObj.users.map((current) => {
+          if (typeof current.image === 'object' && current.image.hasOwnProperty('imageID') && typeof current.image.imageID === 'string') {
+            return current.image.imageID;
+          } else {
+            return '';
+          }
+        })
 
         delete newObj.users;
         delete newObj.skipCount;
@@ -40,10 +55,14 @@ export const runSocket = function(server, io) {
         delete newObj.noHost;
         delete newObj.playData;
 
+        newObj.users = users;
+        newObj.userImages = userImages;
         roomsData.push(JSON.stringify(newObj));
       });
       
       io.sockets.in(socket.id).emit('rooms', roomsData);
+    } else {
+      io.sockets.in(socket.id).emit('rooms', []);
     }
   });
 

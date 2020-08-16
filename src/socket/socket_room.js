@@ -5,12 +5,20 @@ import { skipQueue } from './room_events/skipQueue.js';
 import { changeSetting } from './room_events/changeSetting.js';
 import { refreshAccessToken } from './room_events/refreshAccessToken.js';
 import { userHosts } from './room_events/userHosts.js';
+import { passwordStore } from './store/index';
 
 export const socketRoom = function(io, id, rooms, host, lobby, socketID) {
-    const newRoom = io.of(`/${id}`);
+    const thisRoom = rooms.filter((currentRoom) => currentRoom.name === id);
+    let thisPassword = '';
+
+    if (thisRoom !== undefined && thisRoom.length === 1 && Object.prototype.hasOwnProperty.call(thisRoom[0], 'psw_index')) {
+        thisPassword = passwordStore.roomsPasswords[thisRoom[0].psw_index].password.hash;
+    }
+
+    const newRoom = io.of(`/${id}${thisPassword !== undefined && thisPassword.length ? thisPassword : ''}`);
     const usersRoom = {};
 
-    newRoom.on('connection', function(socket) {
+    newRoom.on('connection', (socket) => {
         let currentUser = {};
 
         // On connection to new room, all "sockets" currently connected
@@ -22,9 +30,9 @@ export const socketRoom = function(io, id, rooms, host, lobby, socketID) {
         // Upon user adding "song" to queue
         socket.on('addQueue', (data) => { addQueue(data, newRoom, currentUser); });
 
-        socket.on('skipTrack', () => { skipQueue(rooms, currentUser, newRoom) })
+        socket.on('skipTrack', () => { skipQueue(rooms, currentUser, newRoom); });
  
-        socket.on('disconnect', () => { userDisconnect(usersRoom, currentUser, newRoom, id); });
+        socket.on('disconnect', () => { userDisconnect(usersRoom, currentUser, newRoom, id, lobby); });
 
         socket.on('changeSetting', (data) => { changeSetting(currentUser, data); });
 

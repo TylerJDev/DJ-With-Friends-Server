@@ -17,3 +17,17 @@ export const randomIDGen = function(ids, count=1) {
 
     return randID;
 }   
+
+export const randomAlphaGen = function() {
+    const characters = 'abcdefghijklmnopqrstuvwxyz'
+    let randID = [];
+
+    for (let i = 0; i < 25; i++) {
+        let randNum = Math.floor(Math.random() * characters.length);
+        randID.push(randNum);
+        randID.push(characters[randNum])
+        randID.push(Math.floor(Math.random() * 10));
+    }
+
+    return randID.join('').substring(0, 15);
+}

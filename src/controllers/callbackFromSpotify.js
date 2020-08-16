@@ -1,5 +1,5 @@
 import request from 'request';
-import * as keys from '../keys.js'; // Replace keys with environment variables
+import * as keys from '../keys.js';
 
 export const callbackFromSpotify = (req, res, next) => {
     const code = req.body['auth_code'] || null;
@@ -34,7 +34,6 @@ export const callbackFromSpotify = (req, res, next) => {
           json: true
         };
   
-        // Use access token to access the Spotify Web API
         request.get(options, function(error, response, body) { 
             try {
                 let authBody = body;
@@ -47,7 +46,6 @@ export const callbackFromSpotify = (req, res, next) => {
         
                 const deviceOptions = { url: 'https://api.spotify.com/v1/me/player/devices', headers: { 'Authorization': 'Bearer ' + access_token }, json: true }
         
-                // Grab devices from client
                 request.get(deviceOptions, function(error, response, body) {
                     authBody.devices = body;
                     res.send(authBody);
@@ -55,7 +53,6 @@ export const callbackFromSpotify = (req, res, next) => {
             } catch (err) { next(err); }
         });
       } else {
-        // Send something to the client here!
         console.log('Invalid Token!', body);
       }
     });
