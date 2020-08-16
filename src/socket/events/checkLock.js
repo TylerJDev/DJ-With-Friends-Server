@@ -36,7 +36,7 @@ export const checkLock = (data, socket) => {
     }
 
     if (data.password === undefined) {
-        if (currentRoom > -1 && passwordStore.roomsPasswords[globalStore.rooms[currentRoom].psw_index].password) {
+        if ((passwordStore.roomsPasswords[globalStore.rooms[currentRoom].psw_index] !== undefined && globalStore.rooms[currentRoom].settings['room-private_'] !== false) &&currentRoom > -1 && passwordStore.roomsPasswords[globalStore.rooms[currentRoom].psw_index].password) {
             socket.emit('lockedRoom', {
                 passwordProtected: true,
                 roomName: globalStore.rooms[currentRoom].settings.room_name,
