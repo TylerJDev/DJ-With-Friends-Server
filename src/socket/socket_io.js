@@ -13,7 +13,7 @@ export const runSocket = function(server, io) {
 
   /* 
   * To ensure that each user who joins the lobby
-  * is placed in their own seperate room.
+  * is placed in their own separate room.
   * This allows for custom messages to be sent to
   * each user without sending to the entire lobby.
   */
