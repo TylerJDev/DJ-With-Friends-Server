@@ -22,7 +22,7 @@ export const socketRoom = function(io, id, rooms, host, lobby, socketID) {
         let currentUser = {};
 
         // On connection to new room, all "sockets" currently connected
-        // Should be emited data on new "socket" (user)
+        // Should be emitted data on new "socket" (user)
 
         // Grab details of user after emitting to newRoom
         socket.on('userDetails', (data) => { userConnect(data, id, currentUser, usersRoom, lobby, newRoom, host, socketID); }); 
