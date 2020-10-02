@@ -1,5 +1,5 @@
 # DJ-With-Friends-Server
-This is the server repo for [djwithfriends](djwithfriends.com)
+This is the server repo for [djwithfriends](https://djwithfriends.com)
 
 ## What is DJ With Friends?
 DJ with Friends is a social music listening website. Using a queue-based system, users can listen to music together through Spotify.
