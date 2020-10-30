@@ -3,36 +3,62 @@ import request from 'request'
 import { globalStore } from '../store/index';
 import { clearSkipQueue } from './skipQueue';
 import winston from '../../../config/winston';
+import {db} from '../socket_io';
 
-
-export const addQueue = (data, newRoom, currentUser) => {
+export const addQueue = (data, newRoom, currentUser, roomRef) => {
     let currentRoom = globalStore.rooms.findIndex(curr => curr.name === currentUser.active.roomID);
 
-    // If queue empty, play track
-    if (globalStore.rooms[currentRoom] !== undefined && globalStore.rooms[currentRoom].queue.length === 0) {
-        playTrack(data, currentUser, globalStore.rooms[currentRoom].host, newRoom);
-    } else if (globalStore.rooms[currentRoom] === undefined) {
-        winston.error(`Room - Could not find index of room, currentUser: ${JSON.stringify(currentUser)}`);
-        return false;
-    }
+    (async function() {
+        const dbQueue = roomRef.get().then(function(doc) {
+            if (doc.exists) {
+                // return playTrack(data, currentUser, globalStore.rooms[currentRoom].host, newRoom, false, roomRef);
+                return doc.data().hostUID;
+            } else {
+                winston.error('Firestore: Document does not exist!');
+                return false; // TODO: Should we resolve reject?
+            }
+        });
 
-    // Add track to queue
-    globalStore.rooms[currentRoom].queue.push(data);
+        await dbQueue;
+        // REFACTOR: If dbQueue is false? Also, see if we can shorten this - do we need to "await" dbQueue when using .then()?
+        dbQueue.then((hostUID) => {
+            if (globalStore.rooms[currentRoom] !== undefined && globalStore.rooms[currentRoom].queue.length === 0) {
+                playTrack(data, currentUser, globalStore.rooms[currentRoom].host, newRoom, false, roomRef, hostUID);
+            } else if (globalStore.rooms[currentRoom] === undefined) {
+                winston.error(`Room - Could not find index of room, currentUser: ${JSON.stringify(currentUser)}`);
+                return false;
+            }
 
-    // Emit to entire room 
-    newRoom.emit('addedQueue', globalStore.rooms[currentRoom].queue);
+            globalStore.rooms[currentRoom].queue.push(data);
+            roomRef.collection('roomQueue').add({ 
+                trackURI: String(data.trackURI),
+                trackTitle: String(data.track),
+                artist: [...data.artist],
+                trackDuration: Number(data.duration),
+                albumTitle: String(data.album),
+                albumImages: Array.isArray(data.albumImage) === true ? data.albumImage : null,
+                whoQueued: String(data.whoQueued),
+                // timestamp: db.FieldValue.serverTimestamp(),
+                // TODO: Add expiresAt field, timestamp
+            }); 
+
+            // Emit to entire room 
+            newRoom.emit('addedQueue', globalStore.rooms[currentRoom].queue);
+        });
+    })();
 };
 
 // Utilize Spotify API to handle "play" state
-export const playTrack = (data, currentUser, roomHost, newRoom, skipped = false) => {
+export const playTrack = (data, currentUser, roomHost, newRoom, skipped = false, roomRef, hostUID) => {
+    const currentData = data;
     let currentRoom;
     let usersCurrent_host;
-    const currentData = data;
 
     if (currentUser === undefined || currentUser.active === undefined) {
         return false;
     }
 
+    // REFACTOR: We don't need this with firestore
     try {
         currentRoom = globalStore.rooms.findIndex(curr => curr.name === currentUser.active.roomID);
         usersCurrent_host = globalStore.rooms[currentRoom].users.filter(curr => curr.id === roomHost)[0];
@@ -41,6 +67,11 @@ export const playTrack = (data, currentUser, roomHost, newRoom, skipped = false)
         return;
     }
 
+    db.collection('users').doc(hostUID).get().then((docData) => {
+        console.log(`Users access token is ${docData.data().accessToken}`);
+    });
+
+    // REFACTOR: Utilize above, if we can't find the access token in the doc, or it's invalid, bail out
     if (usersCurrent_host === undefined) {
         newRoom.emit('roomError', {
             'typeError': 'Couldn\'t find host user\'s access token!'
@@ -77,6 +108,7 @@ export const playTrack = (data, currentUser, roomHost, newRoom, skipped = false)
     let nextTrackAlbum = validQueue ? globalStore.rooms[currentRoom].queue[0].album : '';
     let nextTrackAlbumImage = validQueue ? (globalStore.rooms[currentRoom].queue[0].albumImage !== undefined && globalStore.rooms[currentRoom].queue[0].albumImage) ? globalStore.rooms[currentRoom].queue[0].albumImage : '' : '';
     let options = {};
+
 
     if (skipped === true) {
         globalStore.rooms[currentRoom].timeCounts.forEach((current) => {
@@ -287,6 +319,7 @@ export const playTrack = (data, currentUser, roomHost, newRoom, skipped = false)
     });
 }
 
+// REFACTOR: Put in utils/ (ensure no other file is dependant on this, but on utils/)
 export const pauseTrack = (access_token) => {
     const options = {
         url: 'https://api.spotify.com/v1/me/player/pause',
@@ -303,6 +336,7 @@ export const pauseTrack = (access_token) => {
 
 }
 
+// REFACTOR: Put in utils/
 export const clearFromQueue = (currentRoom, nextTrack, newRoom) => {
     if (globalStore.rooms[currentRoom] === undefined) {
         return false;
@@ -331,6 +365,7 @@ export const clearFromQueue = (currentRoom, nextTrack, newRoom) => {
     }
 }
 
+// REFACTOR: Put in utils/
 const validateAlbumImage = (src) => {
     // Array is expected from passed value {src}
     if (!src.length) {
@@ -346,6 +381,7 @@ const validateAlbumImage = (src) => {
     return newSrc;
 }
 
+// REFACTOR: Put in utils/
 export const startFromPosition = (accessToken, deviceID, position, trackURI, pause=false)  => {
     // This function allows player to start from set position
     // This will be used in order to start the track from the set position if user has to re-auth
