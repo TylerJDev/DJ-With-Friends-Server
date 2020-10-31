@@ -79,47 +79,6 @@ export const playTrack = ({data, currentUser, roomHost, newRoom, skipped, roomRe
         //'history': globalStore.rooms[currentRoom].history
     };
 
-    // REFACTOR: 
-    // let validQueue = globalStore.rooms[currentRoom].queue.length > 0;
-    // Grab the next track in the queue
-    /* let nextTrack = validQueue ? globalStore.rooms[currentRoom].queue[0].trackURI : false;
-    let nextTrackName = validQueue ? globalStore.rooms[currentRoom].queue[0].track : '';
-    let nextTrackArtist = validQueue ? globalStore.rooms[currentRoom].queue[0].artist : '';
-    let nextTrackAlbum = validQueue ? globalStore.rooms[currentRoom].queue[0].album : '';
-    let nextTrackAlbumImage = validQueue ? (globalStore.rooms[currentRoom].queue[0].albumImage !== undefined && globalStore.rooms[currentRoom].queue[0].albumImage) ? globalStore.rooms[currentRoom].queue[0].albumImage : '' : '';
-    let options = {};
-    
-
-    if (skipped === true) {
-        globalStore.rooms[currentRoom].timeCounts.forEach((current) => {
-            clearTimeout(current)
-        });
-        globalStore.rooms[currentRoom].currentTrack = emptyQueue;
-        newRoom.emit('currentTrack', globalStore.rooms[currentRoom].currentTrack);
-        newRoom.emit('addedQueue', globalStore.rooms[currentRoom].queue);
-    }
-
-    if (nextTrack === false) {
-        // Grab track from data passed
-        if (data === undefined) {
-            globalStore.rooms[currentRoom].trackHosts.forEach((current) => {
-                if (current.user.premium === 'true') pauseTrack(current.accessToken);
-            });
-            globalStore.rooms[currentRoom].pauseList.forEach((current) => {
-                if (current.user.premium === 'true') pauseTrack(current.accessToken);
-            });
-
-            newRoom.emit('currentTrack', emptyQueue);
-            newRoom.emit('addedQueue', globalStore.rooms[currentRoom].queue);
-            return false;
-        }
-        nextTrack = data.trackURI;
-        nextTrackName = data.track;
-        nextTrackArtist = data.artist;
-        nextTrackAlbum = data.album;
-        nextTrackAlbumImage = data.albumImage;
-    }*/
-
     db.collection('users').doc(hostUID).get().then(async (docData) => {
         const {accessToken} = docData.data();
 
@@ -154,47 +113,49 @@ export const playTrack = ({data, currentUser, roomHost, newRoom, skipped, roomRe
             // REFACTOR: Do something here & return
             console.log('handle');
         }
-    }).then((trackData) => {
+    }).then(async (trackData) => {
+        const users = roomRef.collection('roomUsers').doc('activeUsers').get().then((userData) => {
+            const activeUsers = userData.data().users;
+            const premUsers = activeUsers.filter(curr => curr.premium === true);
+            return [premUsers, trackData];
+        });
 
-
+        return await users;
+    }).then((userData) => {
+        if (!userData[0].length) {
+            newRoom.emit('roomError', {
+                'typeError': 'No eligible hosts!',
+                'errorMessage': 'Premium host is needed to play from the queue!'
+            });
         
+            return;
+        }
+
+        userData[0].forEach((current, index, arr) => {
+            const options = makePlaybackQuery({deviceID: current.mainDevice, accessToken: current.accessToken, newRoom: newRoom, nextTrack: userData[1].trackURI});
+            if (options) {
+                request.put(options, (err, response, body) => {
+                    if (!body) {
+                        return;
+                    }
+                    const error = JSON.parse(body)['error'];
+                    // TODO: Do some error handling based off of codes
+                    if (error.hasOwnProperty('status') && error.status === 401) {
+                        console.log('access token expired') // REFACTOR:
+                    }
+                });
+            }
+        });
+
     }).catch(e => {
         winston.error(e);
         // Refactor: send something to room
     });
 
-    const makePlaybackQuery = ({
-        deviceID = '',
-        accessToken = ''
-    }) => {
-        if (deviceID === '' || accessToken === '') {
-            newRoom.emit('roomError', {
-                'typeError': 'Couldn\'t find device(s)!',
-                'errorMessage': 'No devices were found',
-                'for': ''
-            });
-
-            // REQUEST FOR A NEW DEVICE ID .. 
-            return false;
-        }
-
-        deviceID = `?device_id=${deviceID}`;
-
-        options = {
-            url: `https://api.spotify.com/v1/me/player/play${deviceID}`,
-            headers: {
-                'Authorization': 'Bearer ' + accessToken
-            },
-            body: JSON.stringify({
-                "uris": [nextTrack],
-            })
-        }
-
-        return options;
-    }
-
     let active = false;
-    globalStore.rooms[currentRoom].trackHosts.forEach((current) => {
+
+    return false;
+     globalStore.rooms[currentRoom].trackHosts.forEach((current) => {
         const options = makePlaybackQuery(current);
         if (options) {
             request.put(options, function (error, response, body) {
@@ -253,8 +214,8 @@ export const playTrack = ({data, currentUser, roomHost, newRoom, skipped, roomRe
                     const checkTrack = () => {
                         let currentAccess_token = userCurrent.access_token;
                         /* If the host isn't premium, the API call above will result in an error
-                        To navigate this issue, find a host in the room whom is currently premium
-                        */
+                        To navigate this issue, find a host in the room whom is currently premium*/
+                        
 
                         if (currentUser.active.premium !== true) {
                             if (!premium_hosts.length) {
@@ -340,6 +301,40 @@ export const playTrack = ({data, currentUser, roomHost, newRoom, skipped, roomRe
             });
         }
     });
+}
+
+// REFACTOR: Put in utils/ (ensure no other file is dependant on this, but on utils/)
+const makePlaybackQuery = ({
+    deviceID = '',
+    accessToken = '',
+    newRoom,
+    nextTrack
+}) => {
+    if (deviceID === '' || accessToken === '') {
+        newRoom.emit('roomError', {
+            'typeError': 'Couldn\'t find device(s)!',
+            'errorMessage': 'No devices were found',
+            'for': ''
+        });
+
+        // REQUEST FOR A NEW DEVICE ID .. 
+        winston.error('No devices were found') // REFACTOR: Remove this
+        return false;
+    }
+
+    deviceID = `?device_id=${deviceID}`;
+
+    const options = {
+        url: `https://api.spotify.com/v1/me/player/play${deviceID}`,
+        headers: {
+            'Authorization': 'Bearer ' + accessToken
+        },
+        body: JSON.stringify({
+            "uris": [nextTrack],
+        })
+    }
+
+    return options;
 }
 
 // REFACTOR: Put in utils/ (ensure no other file is dependant on this, but on utils/)

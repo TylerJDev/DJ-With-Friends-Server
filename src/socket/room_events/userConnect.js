@@ -39,7 +39,7 @@ export const userConnect = async (data, id, currentUser, usersRoom, lobby, newRo
             
             if (!usersPreExist) {
                 await userDataHolder.update({
-                    users: admin.firestore.FieldValue.arrayUnion({uid: user.uid}),
+                    users: admin.firestore.FieldValue.arrayUnion({uid: user.uid, accessToken: user.accessToken, premium: user.premium, mainDevice: user.mainDevice}),
                 }).then(emitUserConnect);
             } else {
                 emitUserConnect();
