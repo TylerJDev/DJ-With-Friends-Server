@@ -7,7 +7,7 @@ import { refreshAccessToken } from './room_events/refreshAccessToken.js';
 import { userHosts } from './room_events/userHosts.js';
 import { passwordStore } from './store/index';
 
-export const socketRoom = function(io, id, rooms, host, lobby, socketID, roomRef) {
+export const socketRoom = function(io, id, rooms, host, lobby, socketID, roomRef, docID, db) {
     const thisRoom = rooms.filter((currentRoom) => currentRoom.name === id);
     let thisPassword = '';
 
@@ -25,7 +25,7 @@ export const socketRoom = function(io, id, rooms, host, lobby, socketID, roomRef
         // Should be emitted data on new "socket" (user)
 
         // Grab details of user after emitting to newRoom
-        socket.on('userDetails', (data) => { userConnect(data, id, currentUser, usersRoom, lobby, newRoom, host, socketID); }); 
+        socket.on('userDetails', (data) => { userConnect(data, id, currentUser, usersRoom, lobby, newRoom, host, socketID, docID, roomRef, db); }); 
 
         // Upon user adding "song" to queue
         socket.on('addQueue', (data) => { addQueue(data, newRoom, currentUser, roomRef); });

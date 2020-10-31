@@ -100,31 +100,34 @@ export const createRoom = (data, socket, lobby, io, socketID, db) => {
         const roomRef = db.collection('rooms').doc(data.settings.docID);
         const roomChat = await roomRef.collection('roomChat').add({roomMessages: []});
         const roomHistory = await roomRef.collection('roomHistory').add({history: []});
+        const roomUsers = await roomRef.collection('roomUsers').doc('activeUsers').set({users: []});
+        const roomQueue = await roomRef.collection('roomQueue').doc('currentQueue').set({queue: []});
         const roomSelf = await roomRef.set({
             roomID: data.name,
             roomLimit: null, // TODO: Set some value here
             roomSocketID: socketID,
             currentTrack: null,
-        }, {merge: true});
-
-        if (Object.prototype.hasOwnProperty.call(data.settings, 'password') && data.settings.password.length) {
-            if (data.settings.password.length < 4 || data.settings.password.length > 30) {
-                socket.emit('roomError', {
-                    typeError: 'Password length is not proper!',
-                    errorMessage: 'Password must be 4-30 characters',
-                    elementError: '{id: "room-password"}',
+        }, {merge: true}).then(() => {
+            console.log(data.settings.docID);
+            if (Object.prototype.hasOwnProperty.call(data.settings, 'password') && data.settings.password.length) {
+                if (data.settings.password.length < 4 || data.settings.password.length > 30) {
+                    socket.emit('roomError', {
+                        typeError: 'Password length is not proper!',
+                        errorMessage: 'Password must be 4-30 characters',
+                        elementError: '{id: "room-password"}',
+                    });
+                    return false;
+                }
+                // Hash password via bcrypt => set hash to db, socket
+                bcrypt.hash(data.settings.password, 10).then(async (hash) => {
+                    await roomRef.set({roomPassword: hash}, {merge: true});
+                    addToRooms(hash);
+                    socketRoom(io, randID, globalStore.rooms, host, lobby, socketID, roomRef, data.settings.docID, db); // REFACTOR: Could we just export some of these?
                 });
-                return false;
+            } else {
+                addToRooms();
+                socketRoom(io, randID, globalStore.rooms, host, lobby, socketID, roomRef, roomUsers, db);
             }
-            // Hash password via bcrypt => set hash to db, socket
-            bcrypt.hash(data.settings.password, 10).then(async (hash) => {
-                await roomRef.set({roomPassword: hash}, {merge: true});
-                addToRooms(hash);
-                socketRoom(io, randID, globalStore.rooms, host, lobby, socketID, roomRef);
-            });
-        } else {
-            addToRooms();
-            socketRoom(io, randID, globalStore.rooms, host, lobby, socketID, roomRef);
-        }
+        });
     })();
 };

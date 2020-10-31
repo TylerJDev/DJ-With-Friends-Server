@@ -7,6 +7,7 @@ export const refreshAccessToken = (data) => {
     const allUsers = globalStore.rooms.map((curr) => curr.trackHosts);
 
     winston.info('refreshAccessToken - Requesting refresh');
+    // REFACTOR:
     allUsers.forEach((currentUser) => {
         currentUser = Array.from(currentUser);
         const currentRoom = globalStore.rooms.findIndex((curr) => curr.name === currentUser[0].user.roomID);
