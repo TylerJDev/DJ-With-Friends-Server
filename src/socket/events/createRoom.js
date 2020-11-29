@@ -122,11 +122,11 @@ export const createRoom = (data, socket, lobby, io, socketID, db) => {
                 bcrypt.hash(data.settings.password, 10).then(async (hash) => {
                     await roomRef.set({roomPassword: hash}, {merge: true});
                     addToRooms(hash);
-                    socketRoom(io, randID, globalStore.rooms, host, lobby, socketID, roomRef, data.settings.docID, db); // REFACTOR: Could we just export some of these?
+                    socketRoom(io, randID, globalStore.rooms, host, lobby, socketID, roomRef, roomUsers, db, data.settings.docID); // REFACTOR: Could we just export some of these?
                 });
-            } else {
+            } else { 
                 addToRooms();
-                socketRoom(io, randID, globalStore.rooms, host, lobby, socketID, roomRef, roomUsers, db);
+                socketRoom(io, randID, globalStore.rooms, host, lobby, socketID, roomRef, roomUsers, db, data.settings.docID);
             }
         });
     })();

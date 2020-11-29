@@ -5,9 +5,12 @@ import { clearSkipQueue } from './skipQueue';
 import winston from '../../../config/winston';
 import {db} from '../socket_io';
 import * as admin from 'firebase-admin';
+import {startFromPosition} from '../../utils/startFromPosition.js';
+import {exportCurrentTrack} from '../../utils/exportCurrentTrack';
+import {setTimer} from '../../utils/setTimer';
 
 export const addQueue = (data, newRoom, currentUser, roomRef) => {
-    let currentRoom = globalStore.rooms.findIndex(curr => curr.name === currentUser.active.roomID);
+    const currentRoom = globalStore.rooms.findIndex(curr => curr.name === currentUser.active.roomID);
 
     (async function() {
         const dbQueue = roomRef.get().then(async function(doc) {
@@ -19,12 +22,11 @@ export const addQueue = (data, newRoom, currentUser, roomRef) => {
                 skipped: false,
                 roomRef: roomRef,
                 hostUID: null,
+                currentRoom: currentRoom,
             }
 
             if (doc.exists) {
                 main.hostUID = doc.data().hostUID;
-
-                // globalStore.rooms[currentRoom].queue.push(data);
                 const trackAdd = roomRef.collection('roomQueue').doc('currentQueue').update({
                     queue: admin.firestore.FieldValue.arrayUnion({
                         trackURI: String(data.trackURI),
@@ -32,7 +34,7 @@ export const addQueue = (data, newRoom, currentUser, roomRef) => {
                         artist: [...data.artist],
                         trackDuration: Number(data.duration),
                         albumTitle: String(data.album),
-                        albumImages: Array.isArray(data.albumImage) === true ? data.albumImage : null,
+                        albumImage: Array.isArray(data.albumImage) === true ? data.albumImage : null,
                         whoQueued: String(data.whoQueued),
                         // timestamp: db.FieldValue.serverTimestamp(),
                         // TODO: Add expiresAt field, timestamp
@@ -42,7 +44,6 @@ export const addQueue = (data, newRoom, currentUser, roomRef) => {
                 });
 
                 return await trackAdd;
-                 //data, currentUser, globalStore.rooms[currentRoom].host, newRoom, false, roomRef, doc.data().hostUID);
             } else {
                 winston.error('Firestore: Document does not exist!');
                 return false; // TODO: Should we resolve reject?
@@ -61,9 +62,8 @@ export const addQueue = (data, newRoom, currentUser, roomRef) => {
 };
 
 // REFACTOR: Put in own file
-export const playTrack = ({data, currentUser, roomHost, newRoom, skipped, roomRef, hostUID}) => {
+export const playTrack = ({data, currentUser, roomHost, newRoom, skipped, roomRef, hostUID, currentRoom}) => {
     const currentData = data;
-    let currentRoom;
     let usersCurrent_host;
     if (currentUser === undefined || currentUser.active === undefined) {
         return;
@@ -99,29 +99,58 @@ export const playTrack = ({data, currentUser, roomHost, newRoom, skipped, roomRe
                 const queueArr = [...queueData.data().queue];
                 const newCurrentTrack = queueArr.shift();
 
+
                 // Remove the track from queue
                 roomRef.collection('roomQueue').doc('currentQueue').set({queue: queueArr});
                 roomRef.update({
                     currentTrack: newCurrentTrack,
                 });
 
-                return newCurrentTrack;
+                newRoom.emit('addedQueue', {queueData: queueArr});
+
+                globalStore.rooms[currentRoom].queue = queueArr;
+                return [newCurrentTrack, queueArr];
             });
 
             return await track;
         } else {
             // REFACTOR: Do something here & return
-            console.log('handle');
+            roomRef.collection('roomQueue').doc('currentQueue').get().then((queueData) => {
+                newRoom.emit('addedQueue', {queueData: [...queueData.data().queue]});
+                globalStore.rooms[currentRoom].queue = queueData.data().queue;
+            });
+
+            // Promise.reject(null);
+            throw new Error(null); // Refactor: use reject instead
         }
     }).then(async (trackData) => {
-        const users = roomRef.collection('roomUsers').doc('activeUsers').get().then((userData) => {
+        const users = roomRef.collection('roomUsers').doc('activeUsers').get().then(async (userData) => {
             const activeUsers = userData.data().users;
-            const premUsers = activeUsers.filter(curr => curr.premium === true);
-            return [premUsers, trackData];
+
+            const premUsers = Promise.all(activeUsers.map(async (curr) => {
+                const res = await curr.get();
+                const data = await res.data();
+                if (data.premium === true) {
+                    return await data;
+                } else {
+                    return false;
+                }
+            }));
+
+            return await [premUsers, trackData[0], trackData[1]];
         });
 
         return await users;
-    }).then((userData) => {
+    }).then(async (userData) => {
+        userData[0] = await userData[0].then((data) => {
+            return data;  
+        });
+
+        // Since we're getting the most recent data -
+        // we can clear accessStore
+
+        globalStore.rooms[currentRoom].accessStore = {};
+
         if (!userData[0].length) {
             newRoom.emit('roomError', {
                 'typeError': 'No eligible hosts!',
@@ -131,22 +160,11 @@ export const playTrack = ({data, currentUser, roomHost, newRoom, skipped, roomRe
             return;
         }
 
-        userData[0].forEach((current, index, arr) => {
-            const options = makePlaybackQuery({deviceID: current.mainDevice, accessToken: current.accessToken, newRoom: newRoom, nextTrack: userData[1].trackURI});
-            if (options) {
-                request.put(options, (err, response, body) => {
-                    if (!body) {
-                        return;
-                    }
-                    const error = JSON.parse(body)['error'];
-                    // TODO: Do some error handling based off of codes
-                    if (error.hasOwnProperty('status') && error.status === 401) {
-                        console.log('access token expired') // REFACTOR:
-                    }
-                });
-            }
-        });
+        const duration = userData[1].trackDuration;
+        const users = userData[0];
 
+        setTrack(users, userData[1], currentRoom, newRoom);
+        return await setTrackTime(duration, users, roomRef, currentRoom, newRoom);
     }).catch(e => {
         winston.error(e);
         // Refactor: send something to room
@@ -154,7 +172,7 @@ export const playTrack = ({data, currentUser, roomHost, newRoom, skipped, roomRe
 
     let active = false;
 
-    return false;
+    return;
      globalStore.rooms[currentRoom].trackHosts.forEach((current) => {
         const options = makePlaybackQuery(current);
         if (options) {
@@ -303,8 +321,93 @@ export const playTrack = ({data, currentUser, roomHost, newRoom, skipped, roomRe
     });
 }
 
+export const setTrack = (users, trackData, currentRoom, newRoom) => {
+    users.forEach(async (current, index, arr) => {
+        /* We keep an array in our "store" to hold access keys that have been updated.
+        They are kept within the array because when going through the "setTrack" when -
+        multiple tracks have been set, we don't recheck the users, meaning the old access key -
+        will be kept until queue reaches a point of no tracks being played.
+        */
+        if (Object.keys(globalStore.rooms[currentRoom].accessStore).includes(current.userID)) {
+            current.accessToken = globalStore.rooms[currentRoom].accessStore[current.userID];
+        }
+
+        console.log(`UserID: ${current.userID}`);
+        console.log(`Access Store Length: ${Object.keys(globalStore.rooms[currentRoom].accessStore).length}`);
+
+        const options = makePlaybackQuery({deviceID: current.mainDevice, accessToken: current.accessToken, newRoom: newRoom, nextTrack: trackData.trackURI});
+        const queue = globalStore.rooms[currentRoom].queue;
+
+        console.log(`setTrack Access Token: ${current.accessToken}`);
+
+        globalStore.rooms[currentRoom].currentTrack = {
+            currentPlaying: true, 
+            trackURI: trackData.trackURI, 
+            startedAt: Date.now(),
+            queue: queue,
+            trackData: trackData,
+        };
+
+        if (options) {
+            request.put(options, async (err, response, body) => {
+                if (body.length) {
+                    const error = JSON.parse(body)['error'];
+                    // TODO: Do some error handling based off of codes
+                    if (error.hasOwnProperty('status') && error.status === 401) {
+                        console.log('Access token expired'); // REFACTOR: Send to client; re-auth on frontend?
+                        newRoom.emit('reAuth', {
+                            'user': current.userID,
+                        });
+                    }
+                }
+                newRoom.emit('addedQueue', {queueData: [...queue]});
+                newRoom.emit('currentTrack', exportCurrentTrack(trackData, queue));
+            });
+        }
+    });
+}
+
+export const setTrackTime = async (duration, users, roomRef, currentRoom, newRoom) => {
+    await setTimer(duration).then(async () => {
+        const queue = globalStore.rooms[currentRoom].queue;
+
+        let paused = [];
+
+        for (const user of users) {
+            paused.push(pauseTrack(user.accessToken));
+        }
+
+        roomRef.update({
+            currentTrack: null,
+        });
+        
+        if (queue.length) {
+            const queued = Promise.all(paused).then(async () => {
+                // Grab first item in queue
+                const song = queue.shift();
+                
+                roomRef.collection('roomQueue').doc('currentQueue').set({queue: queue});
+                
+                await roomRef.update({
+                    currentTrack: song,
+                }).then(() => {
+                    return setTrack(users, song, currentRoom, newRoom);
+                });
+
+                // Refactor: We should keep users updated
+                // Check the queue again to ensure that it's empty
+                return await setTrackTime(song.trackDuration, users, roomRef, currentRoom, newRoom);
+            });
+
+            return await queued;
+        } else {
+            globalStore.rooms[currentRoom].currentTrack = {currentPlaying: false, trackURI: '', startedAt: '', queue: [], trackData: false};
+        }
+    });
+};
+
 // REFACTOR: Put in utils/ (ensure no other file is dependant on this, but on utils/)
-const makePlaybackQuery = ({
+export const makePlaybackQuery = ({
     deviceID = '',
     accessToken = '',
     newRoom,
@@ -337,7 +440,7 @@ const makePlaybackQuery = ({
     return options;
 }
 
-// REFACTOR: Put in utils/ (ensure no other file is dependant on this, but on utils/)
+// REFACTOR: Put in room_events/ (ensure no other file is dependant on this, but on utils/)
 export const pauseTrack = (access_token) => {
     const options = {
         url: 'https://api.spotify.com/v1/me/player/pause',
@@ -346,15 +449,19 @@ export const pauseTrack = (access_token) => {
         },
     }
 
-    request.put(options, function (error, resp, body) {
-        if (error) {
-            winston.error(error);
-        }
+    return new Promise((resolve, reject) => {
+        request.put(options, function (error, resp, body) {
+            if (error) {
+                winston.error(error);
+                reject(error);
+            } else {
+                resolve();
+            }
+        });
     });
-
 }
 
-// REFACTOR: Put in utils/
+// REFACTOR: Put in room_events/
 export const clearFromQueue = (currentRoom, nextTrack, newRoom) => {
     if (globalStore.rooms[currentRoom] === undefined) {
         return false;
@@ -381,47 +488,4 @@ export const clearFromQueue = (currentRoom, nextTrack, newRoom) => {
             pauseTrack(current.accessToken);
         });
     }
-}
-
-// REFACTOR: Put in utils/
-const validateAlbumImage = (src) => {
-    // Array is expected from passed value {src}
-    if (!src.length) {
-        return '';
-    }
-
-    let newSrc = src.filter((current) => {
-        if (current.url.indexOf('https://i.scdn.co/image/') === 0 && current.url.replace('https://i.scdn.co/image/', '').length === 40) {
-            return current;
-        }
-    });
-
-    return newSrc;
-}
-
-// REFACTOR: Put in utils/
-export const startFromPosition = (accessToken, deviceID, position, trackURI, pause=false)  => {
-    // This function allows player to start from set position
-    // This will be used in order to start the track from the set position if user has to re-auth
-
-    const playerOptions = {
-        url: `https://api.spotify.com/v1/me/player/play?device_id=${deviceID}`,
-        headers: {
-            'Authorization': 'Bearer ' + accessToken
-        },
-        body: JSON.stringify({
-            "uris": [trackURI],
-            "position_ms": position
-        })
-    }
-
-    request.put(playerOptions, function (error, response, body) {
-        if (error) {
-            try {
-                winston.error(JSON.stringify(error));
-            } catch(e) {
-                return;
-            }
-        }
-    });
 }

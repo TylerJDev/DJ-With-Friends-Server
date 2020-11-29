@@ -1,28 +1,42 @@
 import { globalStore } from '../store/index.js';
 import winston from '../../../config/winston';
-import { startFromPosition } from './addQueue.js';
+import { startFromPosition } from '../../utils/startFromPosition';
+import {db} from '../socket_io';
 
-export const refreshAccessToken = (data) => {
+export const refreshAccessToken = (data, user) => {
     // Find the "old" access token carrier
-    const allUsers = globalStore.rooms.map((curr) => curr.trackHosts);
-
-    winston.info('refreshAccessToken - Requesting refresh');
-    // REFACTOR:
-    allUsers.forEach((currentUser) => {
-        currentUser = Array.from(currentUser);
-        const currentRoom = globalStore.rooms.findIndex((curr) => curr.name === currentUser[0].user.roomID);
-        if (data.oldAccessToken === currentUser[0].accessToken && data.id === currentUser[0].user.id) {
-            currentUser[0].accessToken = data.newAccessToken;
-            currentUser[0].user.accessToken = data.newAccessToken;
-            winston.info(`newAccessToken: ${data.newAccessToken}`);
-
-            try {
-                const grabPosition = Date.now() - globalStore.rooms[currentRoom].currentTrack.timeStarted;
-                startFromPosition(data.newAccessToken, currentUser[0].user.mainDevice, grabPosition, globalStore.rooms[currentRoom].currentTrack.trackURI); // (accessToken, position, trackURI, pause=false)
-            } catch (e) {
-                winston.error('Error occurred during grabbing position');
-                winston.error(e);
-            }
+    const currentRoom = globalStore.rooms.findIndex(curr => {
+        const thisUser = curr.users.filter(current => current.userID === user.active.userID)
+        if (thisUser.length === 1) {
+            return curr;
         }
     });
+    
+    if (data.id === user.active.id) {
+        db.collection('users').doc(user.active.uid).get().then(async (docData) => {
+            const {accessToken, mainDevice} = docData.data();
+            const currentTrack = globalStore.rooms[currentRoom].currentTrack;
+            const trackURI = currentTrack.trackURI;
+
+            if (accessToken && accessToken !== data.newAccessToken) {
+                db.collection('users').doc(user.active.uid).update({
+                    accessToken: data.newAccessToken,
+                });
+
+                globalStore.rooms[currentRoom].accessStore[user.active.id] = data.newAccessToken;
+
+                console.log(`Set new access token: ${data.newAccessToken} && userID: ${user.active.id}`);
+
+                console.log(globalStore.rooms[currentRoom].currentTrack);
+
+                // adjust player
+
+                if (currentTrack.currentPlaying) {
+                    startFromPosition(data.newAccessToken, mainDevice, (Date.now() - currentTrack.startedAt), trackURI);
+                }
+            }
+        })
+    }
+
+    return;
 };

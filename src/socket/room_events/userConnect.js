@@ -2,6 +2,8 @@ import { globalStore } from '../store/index.js';
 import { userHosts } from './userHosts.js';
 import * as admin from 'firebase-admin';
 import { verifyUserImage } from '../utils/verifyUserImage.js';
+import { startFromPosition } from '../../utils/startFromPosition';
+import { exportCurrentTrack } from '../../utils/exportCurrentTrack';
 
 export const userConnect = async (data, id, currentUser, usersRoom, lobby, newRoom, host, socketID, docID, roomRef, db) => {
     const user = {
@@ -12,7 +14,10 @@ export const userConnect = async (data, id, currentUser, usersRoom, lobby, newRo
         mainDevice: data.mainDevice, // TODO: Find a standard, either "_" or camelCase
         hostMode: data.hostMode,
         image: null,
+        userID: data.userID,
     }
+
+    let accessToken = '';
 
     let usersPreExist = true;
     
@@ -26,6 +31,8 @@ export const userConnect = async (data, id, currentUser, usersRoom, lobby, newRo
             user.uid = String(data.uid);
             // user.topTracks = data.topTracks; TODO: Add this 
             user.image = verifyUserImage(data.images);
+
+            accessToken = docData.data().accessToken;
         })
         .then(handleUserData)
         .then(async () => {
@@ -39,10 +46,36 @@ export const userConnect = async (data, id, currentUser, usersRoom, lobby, newRo
             
             if (!usersPreExist) {
                 await userDataHolder.update({
-                    users: admin.firestore.FieldValue.arrayUnion({uid: user.uid, accessToken: user.accessToken, premium: user.premium, mainDevice: user.mainDevice}),
+                    users: admin.firestore.FieldValue.arrayUnion(
+                        /* {
+                            userID: user.userID, 
+                            accessToken: user.accessToken, 
+                            premium: user.premium, 
+                            mainDevice: user.mainDevice, 
+                            uid: data.uid
+                        }*/
+                        db.collection('users').doc(data.uid)
+                        ),
                 }).then(emitUserConnect);
             } else {
                 emitUserConnect();
+            }
+        }).then(() => {
+            /* We should set the user's player to the current position of the current playing -
+            track, if one is playing. */
+            let currentRoom = globalStore.rooms.findIndex(curr => curr.name === currentUser.active.roomID);
+            currentRoom = globalStore.rooms[currentRoom];
+            if (currentRoom.currentTrack.currentPlaying) {
+                if (currentRoom.currentTrack.hasOwnProperty('queue') && accessToken) {
+                    const {queue, trackData, trackURI, startedAt} = currentRoom.currentTrack;
+
+                    startFromPosition(accessToken, user.mainDevice, (Date.now() - startedAt), trackURI);
+
+                    newRoom.emit('addedQueue', {queueData: [...queue], userID: user.userID});
+                    newRoom.emit('currentTrack', {...exportCurrentTrack(trackData, queue), userID: user.userID});
+                    console.log(Math.floor((Date.now() - startedAt) / 1000));
+                    newRoom.emit('timeUpdate', {seconds: Math.floor((Date.now() - startedAt) / 1000), userID: user.userID}); 
+                }
             }
         })
     }
@@ -80,6 +113,7 @@ export const userConnect = async (data, id, currentUser, usersRoom, lobby, newRo
                     globalStore.rooms[currentRoom].hostSocketID = socketID;
                     globalStore.rooms[currentRoom].noHost = false;
                     globalStore.rooms[currentRoom].playData = {};
+                    globalStore.rooms[currentRoom].accessStore = {};
                 }
 
                 if (user.host === true) {

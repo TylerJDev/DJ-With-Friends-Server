@@ -7,7 +7,7 @@ import { refreshAccessToken } from './room_events/refreshAccessToken.js';
 import { userHosts } from './room_events/userHosts.js';
 import { passwordStore } from './store/index';
 
-export const socketRoom = function(io, id, rooms, host, lobby, socketID, roomRef, docID, db) {
+export const socketRoom = function(io, id, rooms, host, lobby, socketID, roomRef, roomUsers, db, docID) {
     const thisRoom = rooms.filter((currentRoom) => currentRoom.name === id);
     let thisPassword = '';
 
@@ -32,7 +32,7 @@ export const socketRoom = function(io, id, rooms, host, lobby, socketID, roomRef
 
         socket.on('skipTrack', () => { skipQueue(rooms, currentUser, newRoom); });
  
-        socket.on('disconnect', () => { userDisconnect(usersRoom, currentUser, newRoom, id, lobby); });
+        socket.on('disconnect', () => { userDisconnect(usersRoom, currentUser, newRoom, id, lobby, roomRef, docID); });
 
         socket.on('changeSetting', (data) => { changeSetting(currentUser, data); });
 
