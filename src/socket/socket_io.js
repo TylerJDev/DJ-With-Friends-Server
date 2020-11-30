@@ -7,6 +7,14 @@ import * as util from 'util';
 import * as admin from 'firebase-admin';
 import serviceAccount from '../../dj-with-friends-firebase-adminsdk.json';
 
+serviceAccount.type = process.env.type;
+serviceAccount.project_id = process.env.project_id;
+serviceAccount.private_key_id = process.env.private_key_id;
+serviceAccount.private_key = process.env.private_key.replace(/\\n/g, '\n');
+serviceAccount.client_email = process.env.client_email;
+serviceAccount.client_id = process.env.client_id_fs;
+serviceAccount.client_x509_cert_url = process.env.client_x509_cert_url;
+
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
   databaseURL: 'https://dj-with-friends-3097e.firebaseio.com'
