@@ -2,4 +2,3 @@ node_modules
 .env
 logs
 .eslintrc.js
-dj-with-friends-firebase-adminsdk.json
