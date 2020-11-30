@@ -5,7 +5,7 @@ import winston from 'winston/lib/winston/config';
 import {deleteCollection} from '../../utils/deleteRoomFromFirestore';
 import {setTimer} from '../../utils/setTimer';
 
-var collections = ['roomChat', 'roomHistory', 'roomQueue', 'roomUsers'];
+const collections = ['roomChat', 'roomHistory', 'roomQueue', 'roomUsers'];
 export const userDisconnect = (usersRoom, currentUser, newRoom, id, lobby, roomRef, docID) => {
     const deleteRoom = (rooms, currentUserActive, usersRoomActive) => {
         // TEST: Ensure correct room is removed!
