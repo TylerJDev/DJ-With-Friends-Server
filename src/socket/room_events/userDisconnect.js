@@ -1,17 +1,25 @@
 import { globalStore } from '../store/index.js';
+import {db} from '../socket_io';
+import winston from 'winston/lib/winston/config';
+// import {collections} from '../../../constants';  
+import {deleteCollection} from '../../utils/deleteRoomFromFirestore';
+import {setTimer} from '../../utils/setTimer';
 
-export const userDisconnect = (usersRoom, currentUser, newRoom, id, lobby) => {
+const collections = ['roomChat', 'roomHistory', 'roomQueue', 'roomUsers'];
+export const userDisconnect = (usersRoom, currentUser, newRoom, id, lobby, roomRef, docID) => {
     const deleteRoom = (rooms, currentUserActive, usersRoomActive) => {
         // TEST: Ensure correct room is removed!
         delete usersRoomActive[currentUserActive.roomID];
         const findIndexRoom = rooms.findIndex((curr) => curr.name === currentUserActive.roomID);
         const clonedArr = [];
+        
         rooms.splice(findIndexRoom, 1);
 
         if (globalStore.rooms.length) {
             globalStore.rooms.forEach((curr) => {
                 const cloned = {};
                 Object.assign(cloned, curr);
+
                 delete cloned.users;
                 delete cloned.skipCount;
                 delete cloned.timeCounts;
@@ -26,6 +34,12 @@ export const userDisconnect = (usersRoom, currentUser, newRoom, id, lobby) => {
                 clonedArr.push(cloned);
             });
         }
+
+        Promise.all(collections.map(async (current) => {
+            return deleteCollection(db, `rooms/${docID}/${current}`); // Refactor: Security for docID? Ensure it's correct
+        })).then(() => {
+            roomRef.delete();
+        });
 
         lobby.emit('servers', clonedArr);
     };
@@ -77,7 +91,12 @@ export const userDisconnect = (usersRoom, currentUser, newRoom, id, lobby) => {
 
         // Check if room is empty
         if (!usersRoom[currentUser.active.roomID].length) {
-            deleteRoom(globalStore.rooms, currentUser.active, usersRoom);
+            // Wait 2 minutes before delete
+            setTimer(120000).then(() => {
+                if (!usersRoom[currentUser.active.roomID].length) {
+                    deleteRoom(globalStore.rooms, currentUser.active, usersRoom);
+                }
+            });
         }
     } else if (userOccur[0] !== undefined) {
         usersRoom[currentUser.active.roomID].forEach((item, index) => {

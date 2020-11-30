@@ -4,6 +4,23 @@ import { createRoom } from './events/createRoom.js';
 import { checkLock } from './events/checkLock.js';
 import * as store from './store/index.js';
 import * as util from 'util';
+import * as admin from 'firebase-admin';
+import serviceAccount from '../../dj-with-friends-firebase-adminsdk.json';
+
+serviceAccount.type = process.env.type;
+serviceAccount.project_id = process.env.project_id;
+serviceAccount.private_key_id = process.env.private_key_id;
+serviceAccount.private_key = process.env.private_key.replace(/\\n/g, '\n');
+serviceAccount.client_email = process.env.client_email;
+serviceAccount.client_id = process.env.client_id_fs;
+serviceAccount.client_x509_cert_url = process.env.client_x509_cert_url;
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+  databaseURL: 'https://dj-with-friends-3097e.firebaseio.com'
+});
+
+export const db = admin.firestore();
 
 export const runSocket = function(server, io) {
   const lobby = io.of('/rooms');
@@ -69,7 +86,7 @@ export const runSocket = function(server, io) {
   lobby.on('connection', function(socket) {
     socket.on('create_user', (user) => { createUser(user, socket, io); });
     socket.on('disconnect', () => { disconnect(socket); });
-    socket.on('createRoom', (data) => {createRoom(data, socket, lobby, io, socket.id)}); 
+    socket.on('createRoom', (data) => {createRoom(data, socket, lobby, io, socket.id, db)}); 
     socket.on('checkLock', (data) => { checkLock(data, socket)});
   });
 }
