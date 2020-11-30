@@ -34,10 +34,10 @@ export const userDisconnect = (usersRoom, currentUser, newRoom, id, lobby) => {
         return false;
     }
 
-    // Check how many occurances of "user"
+    // Check how many occurrences of "user"
     const userOccur = usersRoom[currentUser.active.roomID].filter((curr) => curr.id === currentUser.active.id);
 
-    // If the last occurance of user has left
+    // If the last occurrence of user has left
     if (userOccur[0] !== undefined && userOccur[0].userCount === 1) {
         newRoom.emit('disconnected', currentUser.active.id);
 
