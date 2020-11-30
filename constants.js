@@ -1,1 +1,1 @@
-export const collections = ['roomChat', 'roomHistory', 'roomQueue', 'roomUsers'];
+var collections = ['roomChat', 'roomHistory', 'roomQueue', 'roomUsers'];

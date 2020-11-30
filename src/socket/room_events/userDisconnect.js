@@ -1,10 +1,11 @@
 import { globalStore } from '../store/index.js';
 import {db} from '../socket_io';
 import winston from 'winston/lib/winston/config';
-import {collections} from '../../../constants';  
+// import {collections} from '../../../constants';  
 import {deleteCollection} from '../../utils/deleteRoomFromFirestore';
 import {setTimer} from '../../utils/setTimer';
 
+var collections = ['roomChat', 'roomHistory', 'roomQueue', 'roomUsers'];
 export const userDisconnect = (usersRoom, currentUser, newRoom, id, lobby, roomRef, docID) => {
     const deleteRoom = (rooms, currentUserActive, usersRoomActive) => {
         // TEST: Ensure correct room is removed!
