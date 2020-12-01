@@ -332,13 +332,8 @@ export const setTrack = (users, trackData, currentRoom, newRoom) => {
             current.accessToken = globalStore.rooms[currentRoom].accessStore[current.userID];
         }
 
-        console.log(`UserID: ${current.userID}`);
-        console.log(`Access Store Length: ${Object.keys(globalStore.rooms[currentRoom].accessStore).length}`);
-
         const options = makePlaybackQuery({deviceID: current.mainDevice, accessToken: current.accessToken, newRoom: newRoom, nextTrack: trackData.trackURI});
         const queue = globalStore.rooms[currentRoom].queue;
-
-        console.log(`setTrack Access Token: ${current.accessToken}`);
 
         globalStore.rooms[currentRoom].currentTrack = {
             currentPlaying: true, 
@@ -354,7 +349,6 @@ export const setTrack = (users, trackData, currentRoom, newRoom) => {
                     const error = JSON.parse(body)['error'];
                     // TODO: Do some error handling based off of codes
                     if (error.hasOwnProperty('status') && error.status === 401) {
-                        console.log('Access token expired'); // REFACTOR: Send to client; re-auth on frontend?
                         newRoom.emit('reAuth', {
                             'user': current.userID,
                         });
@@ -374,7 +368,11 @@ export const setTrackTime = async (duration, users, roomRef, currentRoom, newRoo
         let paused = [];
 
         for (const user of users) {
-            paused.push(pauseTrack(user.accessToken));
+            let usersAccessToken = user.accessToken;
+            if (Object.keys(globalStore.rooms[currentRoom].accessStore).includes(user.userID)) {
+                usersAccessToken = globalStore.rooms[currentRoom].accessStore[current.userID];
+            }
+            paused.push(pauseTrack(usersAccessToken));
         }
 
         roomRef.update({
