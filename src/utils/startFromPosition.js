@@ -10,12 +10,6 @@ import winston from '../../config/winston'
  */
 
 export const startFromPosition = (accessToken, deviceID, position, trackURI)  => {
-    console.log('Start from position');
-    console.log(`Access Token: ${accessToken}`);
-    console.log(`Device ID: ${deviceID}`);
-    console.log(`Position: ${position}`);
-    console.log(`TrackURI: ${trackURI}`);
-
   const playerOptions = {
       url: `https://api.spotify.com/v1/me/player/play?device_id=${deviceID}`,
       headers: {
