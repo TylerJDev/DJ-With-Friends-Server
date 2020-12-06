@@ -24,13 +24,7 @@ export const refreshAccessToken = (data, user) => {
                 });
 
                 globalStore.rooms[currentRoom].accessStore[user.active.id] = data.newAccessToken;
-
-                console.log(`Set new access token: ${data.newAccessToken} && userID: ${user.active.id}`);
-
-                console.log(globalStore.rooms[currentRoom].currentTrack);
-
-                // adjust player
-
+                
                 if (currentTrack.currentPlaying) {
                     startFromPosition(data.newAccessToken, mainDevice, (Date.now() - currentTrack.startedAt), trackURI);
                 }

@@ -60,6 +60,21 @@ export const userDisconnect = (usersRoom, currentUser, newRoom, id, lobby, roomR
 
         // Remove user from globalStore.rooms array
         const currentRoom = globalStore.rooms.findIndex((curr) => curr.name === currentUser.active.roomID);
+
+        // Remove user from firestore
+        roomRef.collection('roomUsers').doc('activeUsers').get().then(async (userData) => {
+            const activeUsers = userData.data().users;
+            const userIndex = activeUsers.findIndex(curr => curr.id === currentUser.active.uid);
+
+            if (userIndex >= 0) {
+                const newUsers = [...activeUsers]
+                newUsers.splice(userIndex, 1);
+                roomRef.collection('roomUsers').doc('activeUsers').update({
+                    users: newUsers,
+                });
+            }
+        });
+
         if (globalStore.rooms[currentRoom] !== undefined) {
             // Check if user is room host
             if (currentUser.active.host === true && globalStore.rooms[currentRoom].id === currentUser.active.id && globalStore.rooms[currentRoom].users.length) {
@@ -92,7 +107,9 @@ export const userDisconnect = (usersRoom, currentUser, newRoom, id, lobby, roomR
         // Check if room is empty
         if (!usersRoom[currentUser.active.roomID].length) {
             // Wait 2 minutes before delete
+            console.log('Set the timer!');
             setTimer(120000).then(() => {
+                console.log('Timer done!');
                 if (!usersRoom[currentUser.active.roomID].length) {
                     deleteRoom(globalStore.rooms, currentUser.active, usersRoom);
                 }

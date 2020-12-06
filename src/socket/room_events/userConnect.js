@@ -47,13 +47,6 @@ export const userConnect = async (data, id, currentUser, usersRoom, lobby, newRo
             if (!usersPreExist) {
                 await userDataHolder.update({
                     users: admin.firestore.FieldValue.arrayUnion(
-                        /* {
-                            userID: user.userID, 
-                            accessToken: user.accessToken, 
-                            premium: user.premium, 
-                            mainDevice: user.mainDevice, 
-                            uid: data.uid
-                        }*/
                         db.collection('users').doc(data.uid)
                         ),
                 }).then(emitUserConnect);
@@ -73,7 +66,6 @@ export const userConnect = async (data, id, currentUser, usersRoom, lobby, newRo
 
                     newRoom.emit('addedQueue', {queueData: [...queue], userID: user.userID});
                     newRoom.emit('currentTrack', {...exportCurrentTrack(trackData, queue), userID: user.userID});
-                    console.log(Math.floor((Date.now() - startedAt) / 1000));
                     newRoom.emit('timeUpdate', {seconds: Math.floor((Date.now() - startedAt) / 1000), userID: user.userID}); 
                 }
             }
