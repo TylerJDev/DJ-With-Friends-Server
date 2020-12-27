@@ -3,10 +3,16 @@
  * @param {number} time - Amount to set timer 
  */
 
-export const setTimer = (time) => {
+import { globalStore } from '../socket/store/index.js';
+
+export const setTimer = (time, timeStarted, currentRoom) => {
     return new Promise((resolve) => {
-        setTimeout(() => {
-            resolve(Date.now());
-        }, time);
+        const timerInterval = setInterval(() => {
+            if (Date.now() >= (timeStarted + time) || globalStore.rooms[currentRoom].skipped) {
+                globalStore.rooms[currentRoom].skipped = false;
+                clearInterval(timerInterval);
+                resolve(Date.now());
+            }
+        }, 100);
     });
 }

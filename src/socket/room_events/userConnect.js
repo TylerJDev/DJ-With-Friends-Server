@@ -106,6 +106,7 @@ export const userConnect = async (data, id, currentUser, usersRoom, lobby, newRo
                     globalStore.rooms[currentRoom].noHost = false;
                     globalStore.rooms[currentRoom].playData = {};
                     globalStore.rooms[currentRoom].accessStore = {};
+                    globalStore.rooms[currentRoom].skipped = false;
                 }
 
                 if (user.host === true) {
