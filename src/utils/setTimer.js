@@ -9,7 +9,7 @@ export const setTimer = (time, timeStarted, currentRoom) => {
     return new Promise((resolve) => {
         const timerInterval = setInterval(() => {
             if (Date.now() >= (timeStarted + time) || globalStore.rooms[currentRoom].skipped) {
-                globalStore.rooms[currentRoom].skipped = false;
+                globalStore.rooms[currentRoom] && (globalStore.rooms[currentRoom].skipped = false);
                 clearInterval(timerInterval);
                 resolve(Date.now());
             }
