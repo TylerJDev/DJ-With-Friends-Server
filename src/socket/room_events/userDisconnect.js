@@ -104,19 +104,23 @@ export const userDisconnect = (usersRoom, currentUser, newRoom, id, lobby, roomR
             usersRoom[currentUser.active.roomID].splice(userIndex, 1);
             newRoom.emit('user', emitData);
         }
-
+        
+        console.log(usersRoom[currentUser.active.roomID]);
+        console.log(usersRoom[currentUser.active.roomID].length);
         // Check if room is empty
         if (!usersRoom[currentUser.active.roomID].length) {
             // Wait 2 minutes before delete
-            setTimer(120000).then(() => {
+            console.log('Set Timer');
+            setTimer(120000, Date.now(), null).then(() => {
                 if (!usersRoom[currentUser.active.roomID].length) {
+                    console.log('Delete');
                     deleteRoom(globalStore.rooms, currentUser.active, usersRoom);
                 }
             });
         }
     } else if (userOccur[0] !== undefined) {
         usersRoom[currentUser.active.roomID].forEach((item, index) => {
-            if (item.id === [currentUser.active.id]) {
+            if (item.uid === currentUser.active.uid) {
                 usersRoom[currentUser.active.roomID][index].userCount -= 1;
             }
         });
