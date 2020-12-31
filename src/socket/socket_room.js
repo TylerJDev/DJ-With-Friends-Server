@@ -21,8 +21,9 @@ export const socketRoom = function(io, id, rooms, host, lobby, socketID, roomRef
     newRoom.on('connection', (socket) => {
         let currentUser = {};
 
-        // On connection to new room, all "sockets" currently connected
-        // Should be emitted data on new "socket" (user)
+        if (thisRoom[0].settings['user-limit_'] && (thisRoom[0].users.length >= thisRoom[0].settings['user-limit_'])) {
+            socket.disconnect();
+        }
 
         // Grab details of user after emitting to newRoom
         socket.on('userDetails', (data) => { userConnect(data, id, currentUser, usersRoom, lobby, newRoom, host, socketID, docID, roomRef, db); }); 
