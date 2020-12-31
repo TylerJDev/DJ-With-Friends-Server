@@ -96,6 +96,8 @@ export const createRoom = (data, socket, lobby, io, socketID, db) => {
         lobby.emit('servers', globalStore.rooms);
     };
 
+    console.log(data.settings);
+
     (async function() {
         const roomRef = db.collection('rooms').doc(data.settings.docID);
         const roomChat = await roomRef.collection('roomChat').add({roomMessages: []});
@@ -104,11 +106,10 @@ export const createRoom = (data, socket, lobby, io, socketID, db) => {
         const roomQueue = await roomRef.collection('roomQueue').doc('currentQueue').set({queue: []});
         const roomSelf = await roomRef.set({
             roomID: data.name,
-            roomLimit: null, // TODO: Set some value here
+            roomLimit: data.settings['user-limit_'],
             roomSocketID: socketID,
             currentTrack: null,
         }, {merge: true}).then(() => {
-            console.log(data.settings.docID);
             if (Object.prototype.hasOwnProperty.call(data.settings, 'password') && data.settings.password.length) {
                 if (data.settings.password.length < 4 || data.settings.password.length > 30) {
                     socket.emit('roomError', {

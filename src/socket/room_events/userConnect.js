@@ -18,7 +18,6 @@ export const userConnect = async (data, id, currentUser, usersRoom, lobby, newRo
     }
 
     let accessToken = '';
-
     let usersPreExist = true;
     
     if (typeof data.uid === 'string' && data.uid.length) { // TODO: check if there's standard length for uid
@@ -78,9 +77,8 @@ export const userConnect = async (data, id, currentUser, usersRoom, lobby, newRo
             usersRoom[id] = [];
         }
         
-        usersPreExist = usersRoom[id].find(curr => curr.id === data.id);
+        usersPreExist = usersRoom[id].find(curr => (curr.uid === data.uid || curr.id == data.userID));
         currentUser.active = user;
-
         let currentRoom = globalStore.rooms.findIndex(curr => curr.name === currentUser.active.roomID);  
         if (usersPreExist === undefined) {
             usersRoom[id].push(user);
@@ -122,7 +120,7 @@ export const userConnect = async (data, id, currentUser, usersRoom, lobby, newRo
         } else {
             // Add instance count to user object
             usersRoom[id].forEach((item, index) => {
-                if (item.id === data.id) {
+                if ((item.uid === data.uid || item.id == data.userID)) {
                     usersRoom[id][index].userCount += 1;
                 }
             });

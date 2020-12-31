@@ -105,8 +105,6 @@ export const userDisconnect = (usersRoom, currentUser, newRoom, id, lobby, roomR
             newRoom.emit('user', emitData);
         }
         
-        console.log(usersRoom[currentUser.active.roomID]);
-        console.log(usersRoom[currentUser.active.roomID].length);
         // Check if room is empty
         if (!usersRoom[currentUser.active.roomID].length) {
             // Wait 2 minutes before delete
