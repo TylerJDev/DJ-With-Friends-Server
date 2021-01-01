@@ -5,7 +5,19 @@ import { verifyUserImage } from '../utils/verifyUserImage.js';
 import { startFromPosition } from '../../utils/startFromPosition';
 import { exportCurrentTrack } from '../../utils/exportCurrentTrack';
 
-export const userConnect = async (data, id, currentUser, usersRoom, lobby, newRoom, host, socketID, docID, roomRef, db) => {
+const checkRoomFull = (room, user) => {
+    const userLimit = room.settings['user-limit_'];
+    const users = room.users;
+    const isUserInRoom = users.findIndex(curr => (curr.uid === user.uid));
+
+    if (userLimit && (users.length >= userLimit) && isUserInRoom === -1) {
+        return true;
+    }
+
+    return;
+};
+
+export const userConnect = async (data, id, currentUser, usersRoom, lobby, newRoom, host, socketID, docID, roomRef, db, currentRoom, socket) => {
     const user = {
         userCount: 1,
         timeJoined: Date.now(),
@@ -15,6 +27,11 @@ export const userConnect = async (data, id, currentUser, usersRoom, lobby, newRo
         hostMode: data.hostMode,
         image: null,
         userID: data.userID,
+    }
+
+    if (checkRoomFull(currentRoom, data)) {
+        socket.disconnect();
+        return;
     }
 
     let accessToken = '';
