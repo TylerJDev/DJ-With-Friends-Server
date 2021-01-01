@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { globalStore, passwordStore } from '../store/index';
 import winston from '../../../config/winston';
+import { checkRoomFull } from '../../utils/checkRoomFull';
 
 export const checkLock = (data, socket) => {
     const currentRoom = globalStore.rooms.findIndex((curr) => String(curr.name) === data.roomID);
@@ -25,14 +26,13 @@ export const checkLock = (data, socket) => {
     }
 
     // Check the current room user limit
-    if (globalStore.rooms[currentRoom].settings['user-limit_'].length &&
-        globalStore.rooms[currentRoom].users.length >= +globalStore.rooms[currentRoom].settings['user-limit_'] &&
-        globalStore.rooms[currentRoom].token !== data.token) {
-            socket.emit('lockedRoom', {
-                userLimit: true,
-            });
+    if (checkRoomFull(globalStore.rooms[currentRoom], {uid: data.uid})) {
+        socket.emit('lockedStatus', {
+            locked: true,
+            paramsTo: '/'
+        });
 
-            return false;
+        return;
     }
 
     if (data.password === undefined) {

@@ -4,18 +4,7 @@ import * as admin from 'firebase-admin';
 import { verifyUserImage } from '../utils/verifyUserImage.js';
 import { startFromPosition } from '../../utils/startFromPosition';
 import { exportCurrentTrack } from '../../utils/exportCurrentTrack';
-
-const checkRoomFull = (room, user) => {
-    const userLimit = room.settings['user-limit_'];
-    const users = room.users;
-    const isUserInRoom = users.findIndex(curr => (curr.uid === user.uid));
-
-    if (userLimit && (users.length >= userLimit) && isUserInRoom === -1) {
-        return true;
-    }
-
-    return;
-};
+import { checkRoomFull } from '../../utils/checkRoomFull';
 
 export const userConnect = async (data, id, currentUser, usersRoom, lobby, newRoom, host, socketID, docID, roomRef, db, currentRoom, socket) => {
     const user = {
