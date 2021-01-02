@@ -74,6 +74,8 @@ export const createRoom = (data, socket, lobby, io, socketID, db) => {
             delete data.password;
         }
 
+        delete data.token;
+
         // Add current time to room data object
         data.timeCreated = new Date().getTime();
 
