@@ -22,7 +22,7 @@ export const checkLock = (data, socket) => {
 
     if (globalStore.rooms[currentRoom] === undefined) {
         winston.info(`Navigation - room ${data.roomID} does not exist`);
-        return false;
+        return;
     }
 
     // Check the current room user limit
@@ -43,9 +43,12 @@ export const checkLock = (data, socket) => {
                 token: globalStore.rooms[currentRoom].token,
             });
         } else {
-            socket.emit('lockedRoom', {
-                passwordProtected: false,
+            socket.emit('lockedStatus', {
+                locked: false,
+                paramsTo: data.roomID,
             });
+
+            return;
         }
     } else {
         bcrypt.compare(data.password, passwordStore.roomsPasswords[globalStore.rooms[currentRoom].psw_index].password.hash, (_err, res) => {
