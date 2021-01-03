@@ -3,7 +3,7 @@ import { globalStore, passwordStore } from '../store/index';
 import { randomIDGen, randomAlphaGen } from '../utils/generateRoomID';
 import { socketRoom } from '../socket_room';
 import winston from '../../../config/winston';
-import { genres, rmvSpecialChars } from '../../../constants';
+import { genres, rmvSpecialChars } from '../../constants';
 
 const findIssue = (findExistingRooms, randID, roomSettings) => {
     if (findExistingRooms.length) {
