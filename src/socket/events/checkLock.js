@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { globalStore, passwordStore } from '../store/index';
 import winston from '../../../config/winston';
+import { checkRoomFull } from '../../utils/checkRoomFull';
 
 export const checkLock = (data, socket) => {
     const currentRoom = globalStore.rooms.findIndex((curr) => String(curr.name) === data.roomID);
@@ -21,18 +22,17 @@ export const checkLock = (data, socket) => {
 
     if (globalStore.rooms[currentRoom] === undefined) {
         winston.info(`Navigation - room ${data.roomID} does not exist`);
-        return false;
+        return;
     }
 
     // Check the current room user limit
-    if (globalStore.rooms[currentRoom].settings['user-limit_'].length &&
-        globalStore.rooms[currentRoom].users.length >= +globalStore.rooms[currentRoom].settings['user-limit_'] &&
-        globalStore.rooms[currentRoom].token !== data.token) {
-            socket.emit('lockedRoom', {
-                userLimit: true,
-            });
+    if (checkRoomFull(globalStore.rooms[currentRoom], {uid: data.uid})) {
+        socket.emit('lockedStatus', {
+            locked: true,
+            paramsTo: '/'
+        });
 
-            return false;
+        return;
     }
 
     if (data.password === undefined) {
@@ -43,9 +43,12 @@ export const checkLock = (data, socket) => {
                 token: globalStore.rooms[currentRoom].token,
             });
         } else {
-            socket.emit('lockedRoom', {
-                passwordProtected: false,
+            socket.emit('lockedStatus', {
+                locked: false,
+                paramsTo: data.roomID,
             });
+
+            return;
         }
     } else {
         bcrypt.compare(data.password, passwordStore.roomsPasswords[globalStore.rooms[currentRoom].psw_index].password.hash, (_err, res) => {

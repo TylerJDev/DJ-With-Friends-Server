@@ -333,10 +333,14 @@ export const clearFromQueue = (currentRoom, nextTrack, newRoom) => {
 
     if (!globalStore.rooms[currentRoom].queue.length) {
         globalStore.rooms[currentRoom].trackHosts.forEach((current) => {
+            console.log('Pause track hosts:');
+            console.log(current);
             if (current.user.premium === 'true' || current.user.premium === true) pauseTrack(current.accessToken);
         });
 
         globalStore.rooms[currentRoom].pauseList.forEach((current) => {
+            console.log('Pause pause list:');
+            console.log(current);
             pauseTrack(current.accessToken);
         });
     }

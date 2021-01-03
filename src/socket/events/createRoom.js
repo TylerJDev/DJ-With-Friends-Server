@@ -3,50 +3,44 @@ import { globalStore, passwordStore } from '../store/index';
 import { randomIDGen, randomAlphaGen } from '../utils/generateRoomID';
 import { socketRoom } from '../socket_room';
 import winston from '../../../config/winston';
+import { genres, rmvSpecialChars } from '../../../constants';
 
+const findIssue = (findExistingRooms, randID, roomSettings) => {
+    if (findExistingRooms.length) {
+        return ['Max rooms exceeded', `You've exceeded the max amount of rooms created!`];
+    } else if (randID.typeError !== undefined) {
+        return [randID];
+    } else if (roomSettings['room-name'].replace(rmvSpecialChars, '').length < 3) {
+        return ['Room Character Limit', 'Room name must be a minimum length of 3 characters!', '{id: "room-name"}'];
+    } else if (!roomSettings['room-genre'].length) {
+        return ['Room Must Have Genre', 'Room must specify at least 1 genre.', '{id: "room-genre"}']
+    }
+
+    return;
+}
+
+const emitError = (socket, typeError, errorMsg, elementError) => {
+    socket.emit('roomError', {
+        typeError: typeError,
+        errorMessage: errorMsg,
+        elementError: elementError ? elementError : null
+    });
+
+    return;
+} 
 
 export const createRoom = (data, socket, lobby, io, socketID, db) => {
     const randID = randomIDGen(globalStore.rooms.map((cID) => cID.name));
     const findExistingRooms = globalStore.rooms.filter((curr) => curr.id === data.id);
+    const issue = findIssue(findExistingRooms, randID, data.settings);
 
-    if (findExistingRooms.length) {
-        socket.emit('roomError', {
-            typeError: 'Max rooms exceeded', errorMessage: 'You\'ve exceeded the max amount of rooms created!'
-        });
-        return false;
+    if (!!issue) {
+        return emitError(socket, ...issue)
     }
-
-    if (randID.typeError !== undefined) {
-        socket.emit('roomError', randID);
-        return false;
-    }
-
-    // 1. Check if proper room name`
-    if (data.settings['room-name'].replace(/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\\/?]/g, '').length < 3) {
-        socket.emit('roomError', {
-            typeError: 'Room Character Limit',
-            errorMessage: 'Room name must be a minimum length of 3 characters!',
-            elementError: '{id: "room-name"}',
-        });
-        return false;
-    }
-
-    // 2. Check if genre(s) is proper
-    if (!data.settings['room-genre'].length) {
-        socket.emit('roomError', {
-            typeError: 'Room Must Have Genre',
-            errorMessage: 'Room must specify at least 1 genre.',
-            elementError: '{id: "room-genre"}',
-        });
-        return false;
-    }
-
-    const genres = ['musical_theatre', 'all', 'popular_music', 'hip_hop', 'jazz', 'folk_music', 'rock', 'blues', 'classical_music', 'country_music', 'heavy_metal', 'pop_music', 'reggae', 'rhythm_and blues', 'disco', 'funk', 'punk_rock', 'electronic_dance music', 'techno', 'rap', 'soul_music', 'alternative_rock', 'instrumental', 'singing', 'dubstep', 'indie_rock', 'orchestra', 'house_music', 'dance_music', 'gospel_music', 'grunge', 'trance_music', 'ambient_music',  'ska', 'pop_rock',  'world_music',  'hardcore_punk', 'easy_listening', 'death_metal', 'folk_rock', 'drum_and bass', 'emo', 'experimental_music', 'new_wave', 'progressive_rock', 'electro', 'baroque_music', 'classic_rock', 'dance_pop', 'opera', 'breakbeat', 'trap_music'];
 
     const acceptedGenres = String(data.settings['room-genre']).split(', ').filter((current) => genres.indexOf(current.toLowerCase(current)) >= 0);
 
     data.settings['room-genre'] = !acceptedGenres.length ? ['all'] : acceptedGenres;
-
     // Name equals the ID of the room
     data.name = randID;
 
@@ -80,6 +74,8 @@ export const createRoom = (data, socket, lobby, io, socketID, db) => {
             delete data.password;
         }
 
+        delete data.token;
+
         // Add current time to room data object
         data.timeCreated = new Date().getTime();
 
@@ -104,11 +100,10 @@ export const createRoom = (data, socket, lobby, io, socketID, db) => {
         const roomQueue = await roomRef.collection('roomQueue').doc('currentQueue').set({queue: []});
         const roomSelf = await roomRef.set({
             roomID: data.name,
-            roomLimit: null, // TODO: Set some value here
+            roomLimit: data.settings['user-limit_'],
             roomSocketID: socketID,
             currentTrack: null,
         }, {merge: true}).then(() => {
-            console.log(data.settings.docID);
             if (Object.prototype.hasOwnProperty.call(data.settings, 'password') && data.settings.password.length) {
                 if (data.settings.password.length < 4 || data.settings.password.length > 30) {
                     socket.emit('roomError', {

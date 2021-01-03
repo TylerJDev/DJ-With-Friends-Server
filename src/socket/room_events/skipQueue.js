@@ -32,9 +32,10 @@ export const skipQueue = (rooms, currentUser, newRoom) => {
         globalStore.rooms[currentRoom].skipCount.add(currentUser.active.id);
 
         console.log(`Voted to skip! Votes must reach at least ${Math.ceil(globalStore.rooms[currentRoom].users.length * 0.66)} to be skipped!`);
+        console.log(globalStore.rooms[currentRoom].skipCount);
 
         // Emit to room
-        newRoom.emit('votedSkip', {'currentVotes': globalStore.rooms[currentRoom].skipCount, 'neededVotes': Math.ceil(globalStore.rooms[currentRoom].users.length * 0.66)});
+        newRoom.emit('votedSkip', {'currentVotes': globalStore.rooms[currentRoom].skipCount.size, 'neededVotes': Math.ceil(globalStore.rooms[currentRoom].users.length * 0.66)});
 
         // Vote must reach at least 66% of total users in room to be skipped
         if (globalStore.rooms[currentRoom].skipCount.size >= Math.ceil(globalStore.rooms[currentRoom].users.length * 0.66)) {
