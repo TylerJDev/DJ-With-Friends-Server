@@ -1,12 +1,12 @@
 {
-  "name": "express-app",
-  "version": "1.0.0",
+  "name": "dj-with-friends-server",
+  "version": "1.0.1",
   "description": "",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "dev": "set NODE_ENV=development&&nodemon ./index.js --exec babel-node -e js",
-    "debug": "set DEBUG=express:* & nodemon ./index.js --exec babel-node -e js",
+    "dev": "set NODE_ENV=development&&nodemon ./index.js --exec ./node_modules/.bin/babel-node -e js",
+    "debug": "set DEBUG=express:* & nodemon ./index.js --exec ./node_modules/.bin/babel-node -e js",
     "build": "babel src -d build"
   },
   "author": "Tyler Jones",
