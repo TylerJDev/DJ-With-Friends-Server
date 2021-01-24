@@ -10,7 +10,8 @@ import {exportCurrentTrack} from '../../utils/exportCurrentTrack';
 import {setTimer} from '../../utils/setTimer';
 
 export const addQueue = (data, newRoom, currentUser, roomRef) => {
-    const currentRoom = globalStore.rooms.findIndex(curr => curr.name === currentUser.active.roomID);
+    console.log(currentUser);
+    const currentRoom = globalStore.rooms.findIndex(curr => curr.name === currentUser?.active?.roomID);
 
     (async function() {
         const dbQueue = roomRef.get().then(async function(doc) {
