@@ -21,11 +21,8 @@ export const socketRoom = function(io, id, rooms, host, lobby, socketID, roomRef
     newRoom.on('connection', (socket) => {
         let currentUser = {};
 
-        // On connection to new room, all "sockets" currently connected
-        // Should be emitted data on new "socket" (user)
-
         // Grab details of user after emitting to newRoom
-        socket.on('userDetails', (data) => { userConnect(data, id, currentUser, usersRoom, lobby, newRoom, host, socketID, docID, roomRef, db); }); 
+        socket.on('userDetails', (data) => { userConnect(data, id, currentUser, usersRoom, lobby, newRoom, host, socketID, docID, roomRef, db, thisRoom[0], socket); }); 
 
         // Upon user adding "song" to queue
         socket.on('addQueue', (data) => { addQueue(data, newRoom, currentUser, roomRef); });

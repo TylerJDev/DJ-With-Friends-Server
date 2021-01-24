@@ -25,7 +25,6 @@ export const db = admin.firestore();
 export const runSocket = function(server, io) {
   const lobby = io.of('/rooms');
   let servStore = store.globalStore;
-  let test = [];
   servStore.lobby = lobby;
 
   /* 
@@ -71,6 +70,7 @@ export const runSocket = function(server, io) {
         delete newObj.hostSocketID;
         delete newObj.noHost;
         delete newObj.playData;
+        delete newObj.skipped;
 
         newObj.users = users;
         newObj.userImages = userImages;

@@ -30,6 +30,7 @@ export const userDisconnect = (usersRoom, currentUser, newRoom, id, lobby, roomR
                 delete cloned.hostSocketID;
                 delete cloned.noHost;
                 delete cloned.playData;
+                delete cloned.skipped;
 
                 clonedArr.push(cloned);
             });
@@ -103,21 +104,21 @@ export const userDisconnect = (usersRoom, currentUser, newRoom, id, lobby, roomR
             usersRoom[currentUser.active.roomID].splice(userIndex, 1);
             newRoom.emit('user', emitData);
         }
-
+        
         // Check if room is empty
         if (!usersRoom[currentUser.active.roomID].length) {
             // Wait 2 minutes before delete
-            console.log('Set the timer!');
-            setTimer(120000).then(() => {
-                console.log('Timer done!');
+            console.log('Set Timer');
+            setTimer(120000, Date.now(), null).then(() => {
                 if (!usersRoom[currentUser.active.roomID].length) {
+                    console.log('Delete');
                     deleteRoom(globalStore.rooms, currentUser.active, usersRoom);
                 }
             });
         }
     } else if (userOccur[0] !== undefined) {
         usersRoom[currentUser.active.roomID].forEach((item, index) => {
-            if (item.id === [currentUser.active.id]) {
+            if (item.uid === currentUser.active.uid) {
                 usersRoom[currentUser.active.roomID][index].userCount -= 1;
             }
         });
