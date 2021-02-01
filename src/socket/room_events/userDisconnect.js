@@ -107,9 +107,11 @@ export const userDisconnect = (usersRoom, currentUser, newRoom, id, lobby, roomR
         
         // Check if room is empty
         if (!usersRoom[currentUser.active.roomID].length) {
+            const TIME_TO_DELETE = process.env.NODE_ENV === 'development' ? 15000 : 120000;
+
             // Wait 2 minutes before delete
             console.log('Set Timer');
-            setTimer(120000, Date.now(), null).then(() => {
+            setTimer(TIME_TO_DELETE, Date.now(), null).then(() => {
                 if (!usersRoom[currentUser.active.roomID].length) {
                     console.log('Delete');
                     deleteRoom(globalStore.rooms, currentUser.active, usersRoom);

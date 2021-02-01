@@ -24,7 +24,7 @@ export const startFromPosition = (accessToken, deviceID, position, trackURI)  =>
   request.put(playerOptions, function (error, response, body) {
       if (error) {
           try {
-              winston.error(JSON.stringify(error));
+              winston.error(`${JSON.stringify(error)} - startFromPosition`);
           } catch(e) {
               return;
           }
