@@ -10,7 +10,7 @@ import {exportCurrentTrack} from '../../utils/exportCurrentTrack';
 import {setTimer} from '../../utils/setTimer';
 
 export const addQueue = (data, newRoom, currentUser, roomRef) => {
-    const currentRoom = globalStore.rooms.findIndex(curr => curr.name === currentUser.active.roomID);
+    const currentRoom = globalStore.rooms.findIndex(curr => curr.name === currentUser?.active?.roomID);
 
     (async function() {
         const dbQueue = roomRef.get().then(async function(doc) {
@@ -56,7 +56,7 @@ export const addQueue = (data, newRoom, currentUser, roomRef) => {
                 console.log('Emit data to room'); // TODO: resolve?
             }
         }).catch(e => {
-            winston.error(e); // TODO:
+            winston.error(`${e} - addQueue`);
         });
     })();
 };
@@ -166,7 +166,7 @@ export const playTrack = ({data, currentUser, roomHost, newRoom, skipped, roomRe
         setTrack(users, userData[1], currentRoom, newRoom);
         return await setTrackTime(duration, users, roomRef, currentRoom, newRoom);
     }).catch(e => {
-        winston.error(e);
+        winston.error(`${e} - playTrack`);
         // Refactor: send something to room
     });
 
@@ -224,7 +224,7 @@ export const setTrackTime = async (duration, users, roomRef, currentRoom, newRoo
         for (const user of users) {
             let usersAccessToken = user.accessToken;
             if (Object.keys(globalStore.rooms[currentRoom].accessStore).includes(user.userID)) {
-                usersAccessToken = globalStore.rooms[currentRoom].accessStore[current.userID];
+                usersAccessToken = globalStore.rooms[currentRoom].accessStore[user.userID];
             }
             paused.push(pauseTrack(usersAccessToken));
         }
@@ -304,7 +304,7 @@ export const pauseTrack = (access_token) => {
     return new Promise((resolve, reject) => {
         request.put(options, function (error, resp, body) {
             if (error) {
-                winston.error(error);
+                winston.error(`${error} - pauseTrack`);
                 reject(error);
             } else {
                 resolve();
